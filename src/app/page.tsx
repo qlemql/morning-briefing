@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import CategoryTab from '@/components/CategoryTab';
 import BriefingCard from '@/components/BriefingCard';
 import CardSkeleton from '@/components/CardSkeleton';
 import PaywallOverlay from '@/components/PaywallOverlay';
 import { BriefingCategory } from '@/lib/types';
 import { CacheUtils } from '@/lib/cache';
-import { getTodayLabel } from '@/constants';
+import { getTodayLabel, CATEGORIES } from '@/constants';
 
 const DONATION_URL = 'https://qr.kakaopay.com/Fa0mKvPtZ';
+const SWIPE_THRESHOLD = 60;
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState('economy');
@@ -18,6 +19,31 @@ export default function Home() {
   const [error, setError] = useState<{ message: string; type: string } | null>(null);
   const [isPremiumUnlocked, setIsPremiumUnlocked] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
+
+  // Swipe gesture tracking
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    touchEndX.current = e.changedTouches[0].clientX;
+    const delta = touchStartX.current - touchEndX.current;
+    const categoryIds = CATEGORIES.map((c) => c.id as string);
+    const currentIndex = categoryIds.indexOf(activeCategory);
+
+    if (Math.abs(delta) > SWIPE_THRESHOLD) {
+      if (delta > 0 && currentIndex < categoryIds.length - 1) {
+        // Swipe left → next category
+        setActiveCategory(categoryIds[currentIndex + 1]);
+      } else if (delta < 0 && currentIndex > 0) {
+        // Swipe right → previous category
+        setActiveCategory(categoryIds[currentIndex - 1]);
+      }
+    }
+  }, [activeCategory]);
 
   const briefing = briefings[activeCategory] || null;
 
@@ -134,8 +160,12 @@ export default function Home() {
         </div>
       )}
 
-      {/* Cards */}
-      <main className="mx-auto max-w-lg px-4 py-6 space-y-3">
+      {/* Cards — swipe to switch categories */}
+      <main
+        className="mx-auto max-w-lg px-4 py-6 space-y-3"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         {loading && !briefing ? (
           <>
             <CardSkeleton />
@@ -143,14 +173,15 @@ export default function Home() {
             <CardSkeleton />
           </>
         ) : briefing ? (
-          briefing.cards.map((card) => (
+          briefing.cards.map((card, index) => (
             <BriefingCard
-              key={card.id}
+              key={`${activeCategory}-${card.id}`}
               card={card}
               categoryId={activeCategory}
               isPaywalled={card.number > 1}
               isPremiumUnlocked={isPremiumUnlocked}
               onPaywallClick={() => setShowPaywallModal(true)}
+              delay={index * 80}
             />
           ))
         ) : !error ? (

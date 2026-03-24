@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { BriefingCard as BriefingCardType } from '@/lib/types';
 import { CARD_TYPE_LABELS, getCategoryById } from '@/constants';
 
@@ -10,6 +10,22 @@ interface BriefingCardProps {
   isPaywalled: boolean;
   isPremiumUnlocked: boolean;
   onPaywallClick: () => void;
+  /** Stagger delay for entrance animation (ms) */
+  delay?: number;
+}
+
+/** Copy card summary + title for sharing */
+function shareCard(card: BriefingCardType) {
+  const text = `[아침 브리핑] ${card.title}\n${card.summary}`;
+
+  if (typeof navigator !== 'undefined' && navigator.share) {
+    navigator.share({ title: '아침 브리핑', text }).catch(() => {
+      // user cancelled or not supported — fall back to clipboard
+      navigator.clipboard?.writeText(text);
+    });
+  } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
+    navigator.clipboard.writeText(text);
+  }
 }
 
 export default function BriefingCard({
@@ -18,17 +34,44 @@ export default function BriefingCard({
   isPaywalled,
   isPremiumUnlocked,
   onPaywallClick,
+  delay = 0,
 }: BriefingCardProps) {
   const [expanded, setExpanded] = useState(card.number === 1);
+  const [entered, setEntered] = useState(delay === 0);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [contentHeight, setContentHeight] = useState<number | undefined>(undefined);
+
   const shouldBlur = isPaywalled && !isPremiumUnlocked;
   const category = getCategoryById(categoryId);
   const typeInfo = CARD_TYPE_LABELS[card.type] || { label: card.type, icon: '📌' };
 
+  // Entrance animation stagger
+  useEffect(() => {
+    if (delay === 0) return;
+    const t = setTimeout(() => setEntered(true), delay);
+    return () => clearTimeout(t);
+  }, [delay]);
+
+  // Measure content height for smooth accordion
+  const measureHeight = useCallback(() => {
+    if (contentRef.current) {
+      setContentHeight(contentRef.current.scrollHeight);
+    }
+  }, []);
+
+  useEffect(() => {
+    measureHeight();
+  }, [expanded, card.content, measureHeight]);
+
   return (
-    <div className="relative rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
-      {/* Card header - always visible */}
+    <div
+      className={`relative rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden transition-all duration-300 ease-out ${
+        entered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
+      }`}
+    >
+      {/* Card header — always visible */}
       <div
-        className={`p-5 ${!shouldBlur ? 'cursor-pointer' : ''}`}
+        className={`p-5 ${!shouldBlur ? 'cursor-pointer active:bg-gray-50 transition-colors' : ''}`}
         onClick={() => !shouldBlur && setExpanded(!expanded)}
       >
         <div className="flex items-start gap-4">
@@ -51,28 +94,54 @@ export default function BriefingCard({
             {/* Title */}
             <h3 className="text-lg font-bold text-gray-900 leading-snug">{card.title}</h3>
 
-            {/* Summary - always visible even behind paywall */}
+            {/* Summary */}
             <p className="mt-1 text-sm text-gray-500">{card.summary}</p>
           </div>
 
-          {/* Expand indicator */}
+          {/* Expand indicator with rotation animation */}
           {!shouldBlur && (
-            <span className="text-gray-400 text-sm mt-1">
-              {expanded ? '▲' : '▼'}
+            <span
+              className={`text-gray-400 text-sm mt-1 transition-transform duration-200 ${
+                expanded ? 'rotate-180' : ''
+              }`}
+            >
+              ▼
             </span>
           )}
         </div>
       </div>
 
-      {/* Expanded content */}
-      {expanded && !shouldBlur && (
-        <div className="px-5 pb-5 border-t border-gray-50">
-          <div className="pt-4 text-base text-gray-700 leading-relaxed whitespace-pre-line">
-            {card.content}
+      {/* Animated content area */}
+      {!shouldBlur && (
+        <div
+          style={{ maxHeight: expanded ? (contentHeight ?? 1000) : 0 }}
+          className="overflow-hidden transition-[max-height] duration-300 ease-in-out"
+        >
+          <div ref={contentRef} className="px-5 pb-5 border-t border-gray-50">
+            <div className="pt-4 text-base text-gray-700 leading-relaxed whitespace-pre-line">
+              {card.content}
+            </div>
+            <div className="mt-3 flex items-center justify-between">
+              {card.source && (
+                <p className="text-xs text-gray-400">출처: {card.source}</p>
+              )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  shareCard(card);
+                }}
+                className="text-xs text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1"
+                aria-label="공유"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
+                  <polyline points="16 6 12 2 8 6" />
+                  <line x1="12" y1="2" x2="12" y2="15" />
+                </svg>
+                공유
+              </button>
+            </div>
           </div>
-          {card.source && (
-            <p className="mt-3 text-xs text-gray-400">출처: {card.source}</p>
-          )}
         </div>
       )}
 
@@ -85,7 +154,7 @@ export default function BriefingCard({
             </div>
             <button
               onClick={onPaywallClick}
-              className={`${category.badgeClass} text-white px-6 py-2.5 rounded-full font-semibold text-sm hover:opacity-90 transition`}
+              className={`${category.badgeClass} text-white px-6 py-2.5 rounded-full font-semibold text-sm hover:opacity-90 active:scale-95 transition`}
             >
               전체 브리핑 보기
             </button>
