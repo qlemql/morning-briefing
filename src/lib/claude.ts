@@ -79,7 +79,10 @@ export async function generateBriefing(
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
       system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
+      messages: [
+        { role: 'user', content: userPrompt },
+        { role: 'assistant', content: '{"cards":[' },
+      ],
     }),
   );
 
@@ -88,12 +91,22 @@ export async function generateBriefing(
     throw new Error('Unexpected response type from Claude');
   }
 
-  const jsonMatch = content.text.match(/\{[\s\S]*\}/);
+  // Prepend the prefill and strip markdown code blocks if present
+  const rawText = '{"cards":[' + content.text;
+  const cleaned = rawText.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
+    console.error('[Claude] No JSON found. Raw response:', content.text.substring(0, 500));
     throw new Error('No JSON found in Claude response');
   }
 
-  const parsed: ClaudeResponse = JSON.parse(jsonMatch[0]);
+  let parsed: ClaudeResponse;
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch {
+    console.error('[Claude] JSON parse failed. Extracted:', jsonMatch[0].substring(0, 500));
+    throw new Error('Invalid JSON in Claude response');
+  }
   if (!parsed.cards || !Array.isArray(parsed.cards)) {
     throw new Error('Invalid response structure from Claude');
   }
