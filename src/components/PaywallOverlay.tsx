@@ -100,10 +100,14 @@ function PaywallContent({
 
           <button
             onClick={handleDonationClick}
-            className="w-full rounded-xl bg-amber-500 text-white py-3.5 font-semibold text-base hover:bg-amber-600 transition mb-3"
+            className="w-full rounded-xl bg-amber-500 text-white py-3.5 font-semibold text-base hover:bg-amber-600 transition mb-2"
           >
             ☕ 커피 한 잔으로 응원하고 전체 보기
           </button>
+
+          <p className="text-center text-xs text-gray-400 dark:text-gray-500 mb-3">
+            3초만 투자하면 오늘 하루 모든 브리핑을 볼 수 있어요
+          </p>
 
           <button
             onClick={onClose}
