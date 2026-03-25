@@ -174,9 +174,19 @@ export async function generateBriefing(
   const categoryKorean = categoryMap[category] || '경제/시사';
   const systemPrompt = SYSTEM_PROMPTS[category] || SYSTEM_PROMPTS.economy;
 
-  const userPrompt = `오늘은 ${date} (KST 기준)입니다. 오늘의 ${categoryKorean} 카테고리 아침 브리핑 카드 3장을 작성해주세요.
+  // KST time info for context
+  const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
+  const kstHour = kstNow.getUTCHours();
+  const dayOfWeek = ['일', '월', '화', '수', '목', '금', '토'][kstNow.getUTCDay()];
+  const timeContext = kstHour < 12
+    ? '오전 출근 전에 읽는 브리핑입니다. 오늘 하루에 필요한 정보에 집중하세요.'
+    : '오후에 읽는 브리핑입니다. 오늘 발생한 주요 뉴스를 정리해주세요.';
 
-중요:
+  const userPrompt = `오늘은 ${date} (${dayOfWeek}요일, KST 기준)입니다. ${timeContext}
+
+오늘의 ${categoryKorean} 카테고리 아침 브리핑 카드 3장을 작성해주세요.
+
+핵심 규칙:
 - 반드시 웹 검색으로 오늘자(${date}) 또는 전날 저녁 최신 뉴스를 찾아주세요
 - 가장 영향력 있고 독자에게 실질적으로 유용한 뉴스를 선택하세요
 - title은 반드시 20자 이내 — 핵심 키워드 + 임팩트 (예: "반도체 훈풍, 삼성 주가 급등")
@@ -185,6 +195,7 @@ export async function generateBriefing(
 - source에는 실제 언론사명 기재 (예: "한국경제", "Bloomberg")
 - 카드 3개의 주제가 서로 겹치지 않도록 다양하게 선택 (같은 기업/이슈 반복 금지)
 - 카드 1의 title은 독자가 멈추고 읽고 싶게 만들어야 함 — 첫인상이 곧 서비스 평가
+- content에서 "~에 따르면", "~라고 밝혔다" 등 인용문을 넣어 신뢰감을 높여주세요
 - JSON만 출력하세요`;
 
   // Budget guard — prevent overspending
