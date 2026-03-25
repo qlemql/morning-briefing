@@ -38,6 +38,19 @@ export default function Home() {
     // 3) 오래된 캐시 정리
     CacheUtils.cleanupOldCache();
     track('page_view', { category: 'economy' });
+
+    // Auto-refresh when tab becomes visible after midnight (new day)
+    const handleVisibility = () => {
+      if (document.visibilityState !== 'visible') return;
+      const cachedDate = CacheUtils.getTodayDate();
+      const now = new Date(Date.now() + 9 * 3600 * 1000).toISOString().split('T')[0];
+      if (cachedDate !== now) {
+        // New day — clear all and reload
+        setBriefings({});
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
   // Swipe gesture tracking
@@ -56,6 +69,22 @@ export default function Home() {
       setTransitioning(false);
     }, 120);
   }, [activeCategory]);
+
+  // Keyboard navigation: arrow keys to switch categories
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      const categoryIds = CATEGORIES.map((c) => c.id as string);
+      const idx = categoryIds.indexOf(activeCategory);
+      if (e.key === 'ArrowRight' && idx < categoryIds.length - 1) {
+        switchCategory(categoryIds[idx + 1]);
+      } else if (e.key === 'ArrowLeft' && idx > 0) {
+        switchCategory(categoryIds[idx - 1]);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [activeCategory, switchCategory]);
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     touchEndX.current = e.changedTouches[0].clientX;
@@ -165,6 +194,15 @@ export default function Home() {
   useEffect(() => {
     loadBriefing(activeCategory);
     track('page_view', { category: activeCategory });
+
+    // Preload adjacent categories after a short delay
+    const categoryIds = CATEGORIES.map((c) => c.id as string);
+    const idx = categoryIds.indexOf(activeCategory);
+    const adjacent = [categoryIds[idx - 1], categoryIds[idx + 1]].filter(Boolean);
+    const preloadTimer = setTimeout(() => {
+      adjacent.forEach((cat) => { if (cat) loadBriefing(cat); });
+    }, 2000);
+    return () => clearTimeout(preloadTimer);
   }, [activeCategory, loadBriefing]);
 
   return (
