@@ -41,7 +41,9 @@ function handleError(
   message: string;
   status: number;
 } {
-  console.error(`[${context}]`, error);
+  const errMsg = error instanceof Error ? error.message : String(error);
+  const errStack = error instanceof Error ? error.stack?.split('\n').slice(0, 3).join(' → ') : '';
+  console.error(`[${context}] ${errMsg}`, errStack ? `| Stack: ${errStack}` : '');
 
   // API Error (5xx)
   if (

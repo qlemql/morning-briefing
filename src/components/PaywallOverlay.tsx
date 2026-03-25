@@ -39,15 +39,33 @@ function PaywallContent({
 
   const handleDonationClick = () => {
     if (donationUrl) {
-      const popup = window.open(donationUrl, '_blank', 'noopener,noreferrer');
-      // popup이 null이면 팝업 차단 — 그래도 카운트다운은 시작
-      setDonationOpened(popup !== null || true);
-    } else {
-      setDonationOpened(true);
+      // 모바일: window.open보다 a 태그 클릭이 더 안정적
+      // 팝업 차단 우회를 위해 직접 navigate
+      const link = document.createElement('a');
+      link.href = donationUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
+    setDonationOpened(true);
     setStep('waiting');
     setCountdown(COUNTDOWN_SECONDS);
   };
+
+  // 탭 복귀 감지 — 도네이션 후 돌아오면 카운트다운 가속
+  useEffect(() => {
+    if (step !== 'waiting' || !donationOpened) return;
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && countdown > 3) {
+        // 사용자가 돌아왔으면 3초로 줄임 (이미 후원 완료 가능성 높음)
+        setCountdown(3);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [step, donationOpened, countdown]);
 
   return (
     <>

@@ -22,6 +22,7 @@ export default function Home() {
   const [error, setError] = useState<{ message: string; type: string } | null>(null);
   const [isPremiumUnlocked, setIsPremiumUnlocked] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
 
   // 페이지 로드 시 localStorage + 서버에서 unlock 상태 복원
   useEffect(() => {
@@ -45,6 +46,15 @@ export default function Home() {
     touchStartX.current = e.touches[0].clientX;
   }, []);
 
+  const switchCategory = useCallback((newCategory: string) => {
+    if (newCategory === activeCategory) return;
+    setTransitioning(true);
+    setTimeout(() => {
+      setActiveCategory(newCategory);
+      setTransitioning(false);
+    }, 120);
+  }, [activeCategory]);
+
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     touchEndX.current = e.changedTouches[0].clientX;
     const delta = touchStartX.current - touchEndX.current;
@@ -53,14 +63,12 @@ export default function Home() {
 
     if (Math.abs(delta) > SWIPE_THRESHOLD) {
       if (delta > 0 && currentIndex < categoryIds.length - 1) {
-        // Swipe left → next category
-        setActiveCategory(categoryIds[currentIndex + 1]);
+        switchCategory(categoryIds[currentIndex + 1]);
       } else if (delta < 0 && currentIndex > 0) {
-        // Swipe right → previous category
-        setActiveCategory(categoryIds[currentIndex - 1]);
+        switchCategory(categoryIds[currentIndex - 1]);
       }
     }
-  }, [activeCategory]);
+  }, [activeCategory, switchCategory]);
 
   const briefing = briefings[activeCategory] || null;
 
@@ -163,7 +171,7 @@ export default function Home() {
           </div>
           <CategoryTab
             activeCategory={activeCategory}
-            onCategoryChange={setActiveCategory}
+            onCategoryChange={switchCategory}
           />
         </div>
       </header>
@@ -199,7 +207,7 @@ export default function Home() {
 
       {/* Cards — swipe to switch categories */}
       <main
-        className="mx-auto max-w-lg px-4 py-6 space-y-3"
+        className={`mx-auto max-w-lg px-4 py-6 space-y-3 transition-opacity duration-150 ${transitioning ? 'opacity-0' : 'opacity-100'}`}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         role="tabpanel"
