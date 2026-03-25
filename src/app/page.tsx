@@ -5,6 +5,7 @@ import CategoryTab from '@/components/CategoryTab';
 import BriefingCard from '@/components/BriefingCard';
 import CardSkeleton from '@/components/CardSkeleton';
 import PaywallOverlay from '@/components/PaywallOverlay';
+import NotificationPrompt from '@/components/NotificationPrompt';
 import { BriefingCategory } from '@/lib/types';
 import { CacheUtils } from '@/lib/cache';
 import { getTodayLabel, CATEGORIES } from '@/constants';
@@ -253,6 +254,9 @@ export default function Home() {
         onClose={() => setShowPaywallModal(false)}
         donationUrl={DONATION_URL || undefined}
       />
+
+      {/* Notification subscription prompt */}
+      <NotificationPrompt />
     </div>
   );
 }
