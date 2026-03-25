@@ -45,15 +45,17 @@ export async function trackPageView(visitorId: string, category?: string): Promi
 }
 
 export async function trackEvent(
-  event: 'share' | 'paywall_click' | 'unlock',
+  event: 'share' | 'paywall_click' | 'unlock' | 'email_subscribed',
 ): Promise<void> {
   const date = getToday();
-  const keyMap = {
+  const keyMap: Record<string, string> = {
     share: `mb:shares:${date}`,
     paywall_click: `mb:paywall:${date}`,
     unlock: `mb:unlocks:${date}`,
+    email_subscribed: `mb:email_sub:${date}`,
   };
   const key = keyMap[event];
+  if (!key) return;
   await kvIncr(key);
   await kvExpire(key, TTL);
 }
