@@ -101,6 +101,8 @@ export default function Home() {
           setError({ message: 'API 키를 확인해주세요.', type: 'auth' });
         } else if (code === 'RATE_LIMITED') {
           setError({ message: '잠시 후 다시 시도해주세요.', type: 'rate' });
+        } else if (data.error?.message?.includes('budget')) {
+          setError({ message: '오늘의 브리핑 생성 한도에 도달했어요. 내일 다시 확인해주세요!', type: 'budget' });
         } else {
           setError({ message: '브리핑을 불러올 수 없습니다.', type: 'general' });
         }
@@ -158,13 +160,13 @@ export default function Home() {
       {error && (
         <div className={`mx-auto max-w-lg px-4 pt-4`}>
           <div className={`rounded-xl p-3 text-sm flex items-center gap-2 ${
-            error.type === 'stale'
+            error.type === 'stale' || error.type === 'budget'
               ? 'bg-amber-50 text-amber-700'
               : 'bg-red-50 text-red-700'
           }`}>
-            <span>{error.type === 'stale' ? '📅' : '⚠️'}</span>
+            <span>{error.type === 'stale' ? '📅' : error.type === 'budget' ? '📊' : '⚠️'}</span>
             <span>{error.message}</span>
-            {error.type !== 'stale' && (
+            {error.type !== 'stale' && error.type !== 'budget' && (
               <button
                 onClick={() => {
                   setBriefings((prev) => {

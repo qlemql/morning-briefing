@@ -1,6 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+
+interface BudgetData {
+  today: {
+    calls: number;
+    estimatedCostCents: number;
+    budgetCents: number;
+  };
+}
 
 interface AnalyticsData {
   today: {
@@ -19,12 +27,19 @@ interface AnalyticsData {
     uniqueVisitors: number;
     shares: number;
   }>;
+  budget?: BudgetData;
 }
 
 interface SubscriberData {
   count: number;
   emails: string[];
 }
+
+const CATEGORY_LABELS: Record<string, string> = {
+  economy: '경제',
+  investment: '투자',
+  lifestyle: '생활/테크',
+};
 
 export default function AdminPage() {
   const [secret, setSecret] = useState('');
@@ -34,7 +49,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const fetchData = async (secretKey: string) => {
+  const fetchData = useCallback(async (secretKey: string) => {
     setLoading(true);
     setError('');
 
@@ -60,14 +75,13 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    // Auto-refresh every 30 seconds if authenticated
     if (!authenticated || !secret) return;
     const interval = setInterval(() => fetchData(secret), 30000);
     return () => clearInterval(interval);
-  }, [authenticated, secret]);
+  }, [authenticated, secret, fetchData]);
 
   if (!authenticated) {
     return (
@@ -100,6 +114,11 @@ export default function AdminPage() {
     );
   }
 
+  const budget = analytics?.budget?.today;
+  const budgetPct = budget
+    ? Math.min(100, Math.round((budget.estimatedCostCents / budget.budgetCents) * 100))
+    : 0;
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-4xl mx-auto">
@@ -113,6 +132,29 @@ export default function AdminPage() {
           </button>
         </div>
 
+        {/* Budget Section */}
+        {budget && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-bold text-gray-900">API 예산</h2>
+              <span className="text-xs text-gray-500">
+                오늘 {budget.calls}회 호출 · ~${(budget.estimatedCostCents / 100).toFixed(2)} / ${(budget.budgetCents / 100).toFixed(2)}
+              </span>
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  budgetPct > 80 ? 'bg-red-500' : budgetPct > 50 ? 'bg-amber-500' : 'bg-emerald-500'
+                }`}
+                style={{ width: `${budgetPct}%` }}
+              />
+            </div>
+            <p className="text-xs text-gray-400 mt-2">
+              {budgetPct}% 사용 · 남은 호출 ~{Math.max(0, Math.floor((budget.budgetCents - budget.estimatedCostCents) / 3))}회
+            </p>
+          </div>
+        )}
+
         {/* KPI Cards */}
         {analytics?.today && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -123,13 +165,21 @@ export default function AdminPage() {
             <KPICard label="페이월 클릭" value={analytics.today.paywallClicks} icon="🔒" />
             <KPICard label="언락" value={analytics.today.unlocks} icon="🔓" />
             <KPICard label="구독자" value={subscribers?.count || 0} icon="📧" />
-            <KPICard
-              label="카테고리"
-              value={Object.entries(analytics.today.categoryViews || {})
-                .map(([k, v]) => `${k}: ${v}`)
-                .join(', ') || '-'}
-              icon="📊"
-            />
+          </div>
+        )}
+
+        {/* Category Views */}
+        {analytics?.today?.categoryViews && Object.keys(analytics.today.categoryViews).length > 0 && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
+            <h2 className="font-bold text-gray-900 mb-4">카테고리별 조회</h2>
+            <div className="grid grid-cols-3 gap-4">
+              {Object.entries(analytics.today.categoryViews).map(([cat, count]) => (
+                <div key={cat} className="text-center">
+                  <div className="text-2xl font-bold text-gray-900">{count}</div>
+                  <div className="text-xs text-gray-500 mt-1">{CATEGORY_LABELS[cat] || cat}</div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

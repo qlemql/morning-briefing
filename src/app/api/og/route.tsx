@@ -74,7 +74,7 @@ export async function GET() {
 
         {/* Feature pills */}
         <div style={{ display: 'flex', gap: '16px' }}>
-          {['경제/시사', '투자', '실전 인사이트'].map((tag) => (
+          {['경제/시사', '투자', '생활/테크'].map((tag) => (
             <div
               key={tag}
               style={{
@@ -101,7 +101,7 @@ export async function GET() {
             color: 'rgba(255,255,255,0.4)',
           }}
         >
-          매일 아침 AI가 정리하는 경제·투자 뉴스 3장 카드
+          매일 아침 AI가 정리하는 경제·투자·생활 뉴스 3장 카드
         </div>
       </div>
     ),
