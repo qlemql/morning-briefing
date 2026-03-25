@@ -162,7 +162,9 @@ export default function Home() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">아침 브리핑</h1>
-              <p className="text-sm text-gray-400 mt-0.5">{getTodayLabel()}</p>
+              <p className="text-sm text-gray-400 mt-0.5">
+                {getTodayLabel()} · {new Date().getHours() < 12 ? '좋은 아침이에요' : new Date().getHours() < 18 ? '좋은 오후예요' : '좋은 저녁이에요'}
+              </p>
             </div>
             {isPremiumUnlocked && (
               <span className="rounded-full bg-gray-900 text-white px-3 py-1 text-xs font-medium">
@@ -253,9 +255,16 @@ export default function Home() {
             ☕ 마음에 드셨다면 커피 한 잔 사주세요
           </a>
         )}
-        <p className="text-center text-xs text-gray-300 mt-4">
-          © 2026 아침 브리핑 · AI가 매일 아침 정리하는 뉴스
-        </p>
+        <div className="text-center text-xs text-gray-300 mt-4 space-y-1">
+          <p>© 2026 아침 브리핑 · AI가 매일 아침 정리하는 뉴스</p>
+          <p>
+            <a href="mailto:thbabu2@gmail.com" className="hover:text-gray-500 transition-colors">
+              문의
+            </a>
+            {' · '}
+            <span>v1.0</span>
+          </p>
+        </div>
       </footer>
 
       {/* Paywall modal */}
