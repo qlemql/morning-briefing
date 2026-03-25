@@ -8,6 +8,7 @@ import PaywallOverlay from '@/components/PaywallOverlay';
 import NotificationPrompt from '@/components/NotificationPrompt';
 import EmailCollector from '@/components/EmailCollector';
 import InstallPrompt from '@/components/InstallPrompt';
+import PullToRefresh from '@/components/PullToRefresh';
 import { BriefingCategory } from '@/lib/types';
 import { CacheUtils } from '@/lib/cache';
 import { getTodayLabel, CATEGORIES } from '@/constants';
@@ -149,12 +150,25 @@ export default function Home() {
     }
   }, [briefings]);
 
+  const handleRefresh = useCallback(async () => {
+    const today = CacheUtils.getTodayDate();
+    CacheUtils.clearBriefing(activeCategory, today);
+    setBriefings((prev) => {
+      const next = { ...prev };
+      delete next[activeCategory];
+      return next;
+    });
+    await new Promise((r) => setTimeout(r, 300));
+    await loadBriefing(activeCategory);
+  }, [activeCategory, loadBriefing]);
+
   useEffect(() => {
     loadBriefing(activeCategory);
     track('page_view', { category: activeCategory });
   }, [activeCategory, loadBriefing]);
 
   return (
+    <PullToRefresh onRefresh={handleRefresh}>
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-100">
@@ -210,11 +224,12 @@ export default function Home() {
 
       {/* Cards — swipe to switch categories */}
       <main
+        id="main-content"
         className={`mx-auto max-w-lg px-4 py-6 space-y-3 transition-opacity duration-150 ${transitioning ? 'opacity-0' : 'opacity-100'}`}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         role="tabpanel"
-        id={`panel-${activeCategory}`}
+        aria-roledescription={`panel-${activeCategory}`}
         aria-label={`${CATEGORIES.find(c => c.id === activeCategory)?.name || ''} 브리핑`}
       >
         {loading && !briefing ? (
@@ -310,5 +325,6 @@ export default function Home() {
       {/* PWA install prompt */}
       <InstallPrompt />
     </div>
+    </PullToRefresh>
   );
 }
