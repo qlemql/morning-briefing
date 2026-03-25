@@ -24,6 +24,16 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: { componentStack?: string | null }) {
     console.error('[ErrorBoundary]', error, info.componentStack);
+    // Report to analytics
+    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+      const body = JSON.stringify({
+        event: 'error_boundary',
+        error: error.message,
+        stack: (info.componentStack || '').substring(0, 200),
+      });
+      const blob = new Blob([body], { type: 'application/json' });
+      navigator.sendBeacon('/api/analytics', blob);
+    }
   }
 
   render() {

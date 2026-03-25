@@ -121,6 +121,13 @@ export default function RootLayout({
                   navigator.serviceWorker.register('/sw.js').catch(() => {});
                 });
               }
+              // Global error reporting
+              window.addEventListener('unhandledrejection', function(e) {
+                if (navigator.sendBeacon) {
+                  var blob = new Blob([JSON.stringify({event:'unhandled_error',error:String(e.reason).substring(0,200)})], {type:'application/json'});
+                  navigator.sendBeacon('/api/analytics', blob);
+                }
+              });
             `,
           }}
         />
