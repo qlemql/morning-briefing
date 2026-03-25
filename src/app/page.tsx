@@ -7,6 +7,7 @@ import CardSkeleton from '@/components/CardSkeleton';
 import PaywallOverlay from '@/components/PaywallOverlay';
 import NotificationPrompt from '@/components/NotificationPrompt';
 import EmailCollector from '@/components/EmailCollector';
+import InstallPrompt from '@/components/InstallPrompt';
 import { BriefingCategory } from '@/lib/types';
 import { CacheUtils } from '@/lib/cache';
 import { getTodayLabel, CATEGORIES } from '@/constants';
@@ -296,6 +297,9 @@ export default function Home() {
 
       {/* Email newsletter collection */}
       <EmailCollector />
+
+      {/* PWA install prompt */}
+      <InstallPrompt />
     </div>
   );
 }
