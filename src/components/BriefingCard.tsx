@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { BriefingCard as BriefingCardType } from '@/lib/types';
 import { CARD_TYPE_LABELS, getCategoryById } from '@/constants';
+import { track } from '@/lib/track';
 
 interface BriefingCardProps {
   card: BriefingCardType;
@@ -13,15 +14,21 @@ interface BriefingCardProps {
   delay?: number;
 }
 
-function shareCard(card: BriefingCardType) {
-  const text = `[아침 브리핑] ${card.title}\n${card.summary}`;
+async function shareCard(card: BriefingCardType): Promise<boolean> {
+  const text = `[아침 브리핑] ${card.title}\n\n${card.summary}\n\n매일 아침 AI가 정리하는 뉴스 👉 https://morning-briefing-mocha.vercel.app`;
   if (typeof navigator !== 'undefined' && navigator.share) {
-    navigator.share({ title: '아침 브리핑', text }).catch(() => {
-      navigator.clipboard?.writeText(text);
-    });
-  } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
-    navigator.clipboard.writeText(text);
+    try {
+      await navigator.share({ title: '아침 브리핑', text, url: 'https://morning-briefing-mocha.vercel.app' });
+      return true;
+    } catch {
+      // user cancelled or not supported — fall back to clipboard
+    }
   }
+  if (typeof navigator !== 'undefined' && navigator.clipboard) {
+    await navigator.clipboard.writeText(text);
+    return true;
+  }
+  return false;
 }
 
 export default function BriefingCard({
@@ -34,8 +41,19 @@ export default function BriefingCard({
 }: BriefingCardProps) {
   const [expanded, setExpanded] = useState(card.number === 1);
   const [entered, setEntered] = useState(delay === 0);
+  const [showCopied, setShowCopied] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const [contentHeight, setContentHeight] = useState<number | undefined>(undefined);
+
+  const handleShare = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const shared = await shareCard(card);
+    if (shared) {
+      track('share');
+      setShowCopied(true);
+      setTimeout(() => setShowCopied(false), 2000);
+    }
+  }, [card]);
 
   const shouldBlur = isPaywalled && !isPremiumUnlocked;
   const category = getCategoryById(categoryId);
@@ -116,16 +134,22 @@ export default function BriefingCard({
                     <p className="text-xs text-white/40">출처: {card.source}</p>
                   )}
                   <button
-                    onClick={(e) => { e.stopPropagation(); shareCard(card); }}
+                    onClick={handleShare}
                     className="text-xs text-white/40 hover:text-white/70 transition-colors flex items-center gap-1"
                     aria-label="공유"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
-                      <polyline points="16 6 12 2 8 6" />
-                      <line x1="12" y1="2" x2="12" y2="15" />
-                    </svg>
-                    공유
+                    {showCopied ? (
+                      <span className="text-emerald-400">복사됨!</span>
+                    ) : (
+                      <>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
+                          <polyline points="16 6 12 2 8 6" />
+                          <line x1="12" y1="2" x2="12" y2="15" />
+                        </svg>
+                        공유
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -200,16 +224,22 @@ export default function BriefingCard({
                   <p className="text-xs text-gray-400">출처: {card.source}</p>
                 )}
                 <button
-                  onClick={(e) => { e.stopPropagation(); shareCard(card); }}
+                  onClick={handleShare}
                   className="text-xs text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1"
                   aria-label="공유"
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
-                    <polyline points="16 6 12 2 8 6" />
-                    <line x1="12" y1="2" x2="12" y2="15" />
-                  </svg>
-                  공유
+                  {showCopied ? (
+                    <span className="text-emerald-500">복사됨!</span>
+                  ) : (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
+                        <polyline points="16 6 12 2 8 6" />
+                        <line x1="12" y1="2" x2="12" y2="15" />
+                      </svg>
+                      공유
+                    </>
+                  )}
                 </button>
               </div>
             </div>

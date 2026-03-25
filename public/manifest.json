@@ -4,8 +4,8 @@
   "description": "AI가 매일 아침 정리해주는 경제·투자 뉴스 브리핑",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f9fafb",
-  "theme_color": "#0d9488",
+  "background_color": "#f5f5f7",
+  "theme_color": "#1d1d1f",
   "orientation": "portrait",
   "icons": [
     {

@@ -8,6 +8,7 @@ import PaywallOverlay from '@/components/PaywallOverlay';
 import { BriefingCategory } from '@/lib/types';
 import { CacheUtils } from '@/lib/cache';
 import { getTodayLabel, CATEGORIES } from '@/constants';
+import { track } from '@/lib/track';
 
 const DONATION_URL = 'https://qr.kakaopay.com/Fa0mKvPtZ';
 const SWIPE_THRESHOLD = 60;
@@ -23,6 +24,7 @@ export default function Home() {
   // 페이지 로드 시 localStorage에서 unlock 상태 복원
   useEffect(() => {
     setIsPremiumUnlocked(CacheUtils.isPremiumUnlocked());
+    track('page_view', { category: 'economy' });
   }, []);
 
   // Swipe gesture tracking
@@ -118,6 +120,7 @@ export default function Home() {
 
   useEffect(() => {
     loadBriefing(activeCategory);
+    track('page_view', { category: activeCategory });
   }, [activeCategory, loadBriefing]);
 
   return (
@@ -192,7 +195,7 @@ export default function Home() {
               categoryId={activeCategory}
               isPaywalled={card.number > 1}
               isPremiumUnlocked={isPremiumUnlocked}
-              onPaywallClick={() => setShowPaywallModal(true)}
+              onPaywallClick={() => { track('paywall_click'); setShowPaywallModal(true); }}
               delay={index * 80}
             />
           ))
@@ -237,6 +240,7 @@ export default function Home() {
             CacheUtils.setPremiumUnlocked();
           }
 
+          track('unlock');
           setIsPremiumUnlocked(true);
           setShowPaywallModal(false);
 

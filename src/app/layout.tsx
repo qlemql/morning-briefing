@@ -5,7 +5,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  themeColor: '#0d9488',
+  themeColor: '#1d1d1f',
 };
 
 export const metadata: Metadata = {
@@ -53,6 +53,17 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-gray-50">
         {children}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                  navigator.serviceWorker.register('/sw.js').catch(() => {});
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );
