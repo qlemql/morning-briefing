@@ -142,7 +142,12 @@ export async function generateBriefing(
     }),
   );
 
-  console.log(`[Claude] Response received. Stop reason: ${message.stop_reason}`);
+  const usage = message.usage;
+  console.log(
+    `[Claude] Response received. Stop: ${message.stop_reason}` +
+    ` | Input: ${usage.input_tokens} (cache_read: ${(usage as unknown as Record<string, number>).cache_read_input_tokens || 0})` +
+    ` | Output: ${usage.output_tokens}`,
+  );
 
   // Extract text content from potentially multi-block response
   const rawText = extractTextFromResponse(message.content);
@@ -153,21 +158,40 @@ export async function generateBriefing(
   }
 
   // Clean markdown code blocks if present
-  const cleaned = rawText.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+  const cleaned = rawText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
 
-  // Extract JSON
-  const jsonMatch = cleaned.match(/\{[\s\S]*?\}(?=\s*$)/) || cleaned.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    console.error('[Claude] No JSON found. Raw response:', rawText.substring(0, 500));
-    throw new Error('No JSON found in Claude response');
+  // Extract JSON — try multiple strategies
+  let parsed: ClaudeResponse | null = null;
+
+  // Strategy 1: Parse the entire cleaned text
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    // Strategy 2: Find the outermost { ... } containing "cards"
+    const start = cleaned.indexOf('{"cards"');
+    if (start >= 0) {
+      // Find matching closing brace
+      let depth = 0;
+      let end = start;
+      for (let i = start; i < cleaned.length; i++) {
+        if (cleaned[i] === '{') depth++;
+        else if (cleaned[i] === '}') { depth--; if (depth === 0) { end = i + 1; break; } }
+      }
+      try {
+        parsed = JSON.parse(cleaned.substring(start, end));
+      } catch {
+        // Strategy 3: Greedy regex
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          try { parsed = JSON.parse(jsonMatch[0]); } catch { /* fall through */ }
+        }
+      }
+    }
   }
 
-  let parsed: ClaudeResponse;
-  try {
-    parsed = JSON.parse(jsonMatch[0]);
-  } catch {
-    console.error('[Claude] JSON parse failed. Extracted:', jsonMatch[0].substring(0, 500));
-    throw new Error('Invalid JSON in Claude response');
+  if (!parsed) {
+    console.error('[Claude] No valid JSON found. Raw:', rawText.substring(0, 500));
+    throw new Error('No JSON found in Claude response');
   }
   if (!parsed.cards || !Array.isArray(parsed.cards) || parsed.cards.length === 0) {
     throw new Error('Invalid or empty response structure from Claude');
