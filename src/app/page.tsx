@@ -11,6 +11,7 @@ import InstallPrompt from '@/components/InstallPrompt';
 import PullToRefresh from '@/components/PullToRefresh';
 import WelcomeToast from '@/components/WelcomeToast';
 import ToastContainer, { showToast } from '@/components/Toast';
+import UpdateBanner from '@/components/UpdateBanner';
 import { BriefingCategory } from '@/lib/types';
 import { CacheUtils } from '@/lib/cache';
 import { getTodayLabel, CATEGORIES } from '@/constants';
@@ -247,6 +248,8 @@ export default function Home() {
       <WelcomeToast />
       {/* Global toast notifications */}
       <ToastContainer />
+      {/* Update banner for returning users */}
+      <UpdateBanner />
 
       {/* Top loading bar */}
       {loading && (
