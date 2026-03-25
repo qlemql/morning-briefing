@@ -45,7 +45,7 @@ export async function trackPageView(visitorId: string, category?: string): Promi
 }
 
 export async function trackEvent(
-  event: 'share' | 'paywall_click' | 'unlock' | 'email_subscribed',
+  event: string,
 ): Promise<void> {
   const date = getToday();
   const keyMap: Record<string, string> = {
@@ -53,6 +53,11 @@ export async function trackEvent(
     paywall_click: `mb:paywall:${date}`,
     unlock: `mb:unlocks:${date}`,
     email_subscribed: `mb:email_sub:${date}`,
+    card_toggle: `mb:toggles:${date}`,
+    pwa_installed: `mb:pwa:${date}`,
+    pwa_install_click: `mb:pwa_click:${date}`,
+    notif_subscribed: `mb:notif:${date}`,
+    notif_subscribe_click: `mb:notif_click:${date}`,
   };
   const key = keyMap[event];
   if (!key) return;
