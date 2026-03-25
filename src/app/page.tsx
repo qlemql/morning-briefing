@@ -13,6 +13,7 @@ import { BriefingCategory } from '@/lib/types';
 import { CacheUtils } from '@/lib/cache';
 import { getTodayLabel, CATEGORIES } from '@/constants';
 import { track } from '@/lib/track';
+import { hapticMedium } from '@/lib/haptic';
 
 const DONATION_URL = 'https://qr.kakaopay.com/Fa0mKvPtZ';
 const SWIPE_THRESHOLD = 60;
@@ -187,6 +188,7 @@ export default function Home() {
   }, [briefings]);
 
   const handleRefresh = useCallback(async () => {
+    hapticMedium();
     const today = CacheUtils.getTodayDate();
     CacheUtils.clearBriefing(activeCategory, today);
     setBriefings((prev) => {
@@ -197,6 +199,12 @@ export default function Home() {
     await new Promise((r) => setTimeout(r, 300));
     await loadBriefing(activeCategory);
   }, [activeCategory, loadBriefing]);
+
+  // Dynamic page title based on category
+  useEffect(() => {
+    const catName = CATEGORIES.find(c => c.id === activeCategory)?.name || '';
+    document.title = `${catName} · 아침 브리핑`;
+  }, [activeCategory]);
 
   useEffect(() => {
     loadBriefing(activeCategory);
