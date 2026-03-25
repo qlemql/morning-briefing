@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import './globals.css';
 
 export const viewport: Viewport = {
@@ -55,7 +56,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-gray-50">
-        {children}
+        <ErrorBoundary>{children}</ErrorBoundary>
         <script
           dangerouslySetInnerHTML={{
             __html: `
