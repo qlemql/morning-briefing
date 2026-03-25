@@ -35,6 +35,12 @@ interface SubscriberData {
   emails: string[];
 }
 
+interface HealthData {
+  status: string;
+  responseMs: number;
+  checks: Record<string, { ok: boolean; detail?: string }>;
+}
+
 const CATEGORY_LABELS: Record<string, string> = {
   economy: '경제',
   investment: '투자',
@@ -46,19 +52,22 @@ export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [subscribers, setSubscribers] = useState<SubscriberData | null>(null);
+  const [health, setHealth] = useState<HealthData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [cronRunning, setCronRunning] = useState(false);
   const [cronResult, setCronResult] = useState<string | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<string>('');
 
   const fetchData = useCallback(async (secretKey: string) => {
     setLoading(true);
     setError('');
 
     try {
-      const [analyticsRes, subscribersRes] = await Promise.all([
+      const [analyticsRes, subscribersRes, healthRes] = await Promise.all([
         fetch(`/api/analytics?secret=${encodeURIComponent(secretKey)}`),
         fetch(`/api/subscribe?secret=${encodeURIComponent(secretKey)}`),
+        fetch('/api/health').catch(() => null),
       ]);
 
       if (!analyticsRes.ok || !subscribersRes.ok) {
@@ -68,10 +77,15 @@ export default function AdminPage() {
 
       const analyticsData = await analyticsRes.json();
       const subscribersData = await subscribersRes.json();
+      if (healthRes?.ok) {
+        const healthData = await healthRes.json();
+        setHealth(healthData);
+      }
 
       setAnalytics(analyticsData.data);
       setSubscribers(subscribersData);
       setAuthenticated(true);
+      setLastRefresh(new Date().toLocaleTimeString('ko-KR'));
     } catch {
       setError('데이터를 불러올 수 없습니다.');
     } finally {
@@ -150,13 +164,27 @@ export default function AdminPage() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">아침 브리핑 대시보드</h1>
-          <button
-            onClick={() => fetchData(secret)}
-            className="text-sm text-gray-500 hover:text-gray-700"
-          >
-            새로고침
-          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">아침 브리핑 대시보드</h1>
+            {lastRefresh && (
+              <p className="text-xs text-gray-400 mt-1">마지막 업데이트: {lastRefresh} · 30초마다 자동 갱신</p>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            {health && (
+              <span className={`text-xs px-2 py-1 rounded-full ${
+                health.status === 'healthy' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+              }`}>
+                {health.status === 'healthy' ? '● 정상' : '● 점검'}
+              </span>
+            )}
+            <button
+              onClick={() => fetchData(secret)}
+              className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              새로고침
+            </button>
+          </div>
         </div>
 
         {/* Manual Cron Trigger */}
@@ -276,7 +304,7 @@ export default function AdminPage() {
 
         {/* Subscribers */}
         {subscribers && subscribers.emails.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
             <h2 className="font-bold text-gray-900 mb-4">
               구독자 ({subscribers.count}명)
             </h2>
@@ -289,6 +317,43 @@ export default function AdminPage() {
             </div>
           </div>
         )}
+
+        {/* System Status */}
+        {health && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
+            <h2 className="font-bold text-gray-900 mb-4">시스템 상태 ({health.responseMs}ms)</h2>
+            <div className="space-y-2">
+              {Object.entries(health.checks).map(([key, check]) => (
+                <div key={key} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${check.ok ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                    <span className="text-sm font-medium text-gray-700 capitalize">{key.replace('_', ' ')}</span>
+                  </div>
+                  <span className="text-xs text-gray-400">{check.detail}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Quick Actions */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <h2 className="font-bold text-gray-900 mb-4">바로가기</h2>
+          <div className="flex flex-wrap gap-2">
+            <a href="/" target="_blank" rel="noreferrer" className="text-sm px-4 py-2 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors">
+              🌐 사이트 보기
+            </a>
+            <a href="https://github.com/qlemql/morning-briefing" target="_blank" rel="noreferrer" className="text-sm px-4 py-2 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors">
+              📦 GitHub
+            </a>
+            <a href="https://vercel.com/dashboard" target="_blank" rel="noreferrer" className="text-sm px-4 py-2 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors">
+              ▲ Vercel
+            </a>
+            <a href="https://console.upstash.com" target="_blank" rel="noreferrer" className="text-sm px-4 py-2 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors">
+              🗄️ Upstash
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );
