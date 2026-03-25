@@ -226,7 +226,8 @@ export default function Home() {
           ))
         ) : !error ? (
           <div className="text-center py-16">
-            <p className="text-gray-400 text-sm">브리핑을 불러오는 중...</p>
+            <div className="text-3xl mb-3">☕</div>
+            <p className="text-gray-400 text-sm">오늘의 브리핑을 준비하고 있어요</p>
           </div>
         ) : null}
       </main>

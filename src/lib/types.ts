@@ -66,8 +66,8 @@ export interface MorningBriefingResponse {
  * Request payload for generating a single category briefing
  */
 export interface GenerateBriefingRequest {
-  /** Category to generate ("economy" | "investment") */
-  category: "economy" | "investment";
+  /** Category to generate */
+  category: "economy" | "investment" | "lifestyle";
 
   /** Optional override for generation date (defaults to today) */
   date?: string;
