@@ -208,6 +208,13 @@ export default function Home() {
   return (
     <PullToRefresh onRefresh={handleRefresh}>
     <div className="min-h-screen bg-gray-50">
+      {/* Top loading bar */}
+      {loading && (
+        <div className="fixed top-0 left-0 right-0 z-50 h-0.5 bg-gray-200">
+          <div className="h-full bg-gray-900 loading-bar" />
+        </div>
+      )}
+
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-100">
         <div className="mx-auto max-w-lg px-4 pt-5 pb-4">

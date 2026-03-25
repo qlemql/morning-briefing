@@ -97,3 +97,25 @@ html {
 .animate-slide-up {
   animation: slideUp 0.3s ease-out forwards;
 }
+
+/* Respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-slide-up,
+  .animate-slide-up,
+  .skeleton-shimmer,
+  .tab-indicator {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Top loading bar */
+@keyframes loadingBar {
+  0% { width: 0%; }
+  50% { width: 70%; }
+  100% { width: 100%; }
+}
+
+.loading-bar {
+  animation: loadingBar 1.5s ease-in-out infinite;
+}
