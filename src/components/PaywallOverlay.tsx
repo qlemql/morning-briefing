@@ -9,22 +9,25 @@ interface PaywallOverlayProps {
   donationUrl?: string;
 }
 
+const COUNTDOWN_SECONDS = 10;
+
 function PaywallContent({
   onUnlock,
   onClose,
   donationUrl,
 }: Omit<PaywallOverlayProps, 'isVisible'>) {
   const [step, setStep] = useState<'intro' | 'waiting' | 'unlocked'>('intro');
-  const [countdown, setCountdown] = useState(5);
+  const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
+  const [donationOpened, setDonationOpened] = useState(false);
 
-  // 카운트다운 타이머
+  // 카운트다운 타이머 — 후원 페이지를 실제로 열어야만 시작
   useEffect(() => {
-    if (step !== 'waiting' || countdown <= 0) return;
+    if (step !== 'waiting' || !donationOpened || countdown <= 0) return;
     const timer = setTimeout(() => {
       setCountdown((c) => c - 1);
     }, 1000);
     return () => clearTimeout(timer);
-  }, [step, countdown]);
+  }, [step, countdown, donationOpened]);
 
   // countdown이 0이 되면 unlocked로 전환
   useEffect(() => {
@@ -36,10 +39,14 @@ function PaywallContent({
 
   const handleDonationClick = () => {
     if (donationUrl) {
-      window.open(donationUrl, '_blank', 'noopener,noreferrer');
+      const popup = window.open(donationUrl, '_blank', 'noopener,noreferrer');
+      // popup이 null이면 팝업 차단 — 그래도 카운트다운은 시작
+      setDonationOpened(popup !== null || true);
+    } else {
+      setDonationOpened(true);
     }
     setStep('waiting');
-    setCountdown(5);
+    setCountdown(COUNTDOWN_SECONDS);
   };
 
   return (
@@ -101,7 +108,7 @@ function PaywallContent({
               <circle cx="32" cy="32" r="28" fill="none" stroke="#e5e7eb" strokeWidth="4" />
               <circle
                 cx="32" cy="32" r="28" fill="none" stroke="#f59e0b" strokeWidth="4"
-                strokeDasharray={`${(1 - countdown / 5) * 175.9} 175.9`}
+                strokeDasharray={`${(1 - countdown / COUNTDOWN_SECONDS) * 175.9} 175.9`}
                 strokeLinecap="round"
                 className="transition-all duration-1000 ease-linear"
               />

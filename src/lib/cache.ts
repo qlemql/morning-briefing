@@ -83,13 +83,53 @@ export const CacheUtils = {
   },
 
   /**
-   * Get today's date in YYYY-MM-DD format
+   * Get today's date in YYYY-MM-DD format (KST)
    */
   getTodayDate: (): string => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    const now = new Date(Date.now() + 9 * 3600 * 1000);
+    return now.toISOString().split('T')[0];
+  },
+
+  /**
+   * Check if premium is unlocked for today
+   */
+  isPremiumUnlocked: (): boolean => {
+    if (typeof window === 'undefined') return false;
+    try {
+      const stored = localStorage.getItem('premium_unlock_date');
+      return stored === CacheUtils.getTodayDate();
+    } catch {
+      return false;
+    }
+  },
+
+  /**
+   * Mark premium as unlocked for today + store HMAC tokens from server
+   */
+  setPremiumUnlocked: (tokens?: Record<string, string>): void => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem('premium_unlock_date', CacheUtils.getTodayDate());
+      if (tokens) {
+        localStorage.setItem('premium_tokens', JSON.stringify(tokens));
+      }
+    } catch (error) {
+      console.error('Premium unlock save error:', error);
+    }
+  },
+
+  /**
+   * Get server-signed unlock token for API request
+   */
+  getUnlockToken: (category: string): string => {
+    if (!CacheUtils.isPremiumUnlocked()) return '';
+    try {
+      const tokensStr = localStorage.getItem('premium_tokens');
+      if (!tokensStr) return '';
+      const tokens = JSON.parse(tokensStr) as Record<string, string>;
+      return tokens[category] || '';
+    } catch {
+      return '';
+    }
   },
 };

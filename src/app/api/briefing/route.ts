@@ -1,7 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createHmac } from 'crypto';
 import { generateBriefing } from '@/lib/claude';
 import { ServerCache } from '@/lib/server-cache';
 import { ApiResponse, BriefingCategory } from '@/lib/types';
+
+/**
+ * HMAC-SHA256 기반 unlock 토큰 검증
+ * 시크릿: CRON_SECRET 환경변수 재활용 (별도 시크릿 불필요)
+ */
+function verifyUnlockToken(token: string, date: string, category: string): boolean {
+  const secret = process.env.CRON_SECRET || 'default-dev-secret';
+  const expected = createHmac('sha256', secret)
+    .update(`mb_${date}_${category}`)
+    .digest('hex')
+    .substring(0, 32);
+  return token === expected;
+}
+
+/**
+ * unlock 토큰 생성 (클라이언트에 전달용)
+ */
+export function generateUnlockToken(date: string, category: string): string {
+  const secret = process.env.CRON_SECRET || 'default-dev-secret';
+  return createHmac('sha256', secret)
+    .update(`mb_${date}_${category}`)
+    .digest('hex')
+    .substring(0, 32);
+}
 
 /**
  * Error scenario handlers
@@ -109,14 +134,32 @@ export async function POST(
       () => generateBriefing(category, targetDate),
     );
 
+    // Check HMAC-signed unlock token
+    const unlockToken = request.headers.get('x-unlock-token') || '';
+    const isUnlocked = unlockToken !== '' && verifyUnlockToken(unlockToken, targetDate, category);
+
+    // Server-side content gating: strip card 2-3 content for non-unlocked users
+    const gatedBriefing = {
+      ...briefing,
+      cards: briefing.cards.map((card) => {
+        if (card.number === 1 || isUnlocked) return card;
+        // Premium cards: keep title, summary, metadata but strip content
+        return {
+          ...card,
+          content: '',
+        };
+      }),
+    };
+
     return NextResponse.json(
       {
         meta: {
           version: '1.0',
           status: 'success',
           processingTimeMs: Date.now() - startTime,
+          unlocked: isUnlocked,
         },
-        data: briefing,
+        data: gatedBriefing,
       },
       { status: 200 },
     );
@@ -142,10 +185,28 @@ export async function POST(
 }
 
 /**
- * GET /api/briefing
- * Health check / endpoint info
+ * GET /api/briefing?action=unlock
+ * - action=unlock: 페이월 통과 후 unlock 토큰 발급
+ * - default: Health check
  */
-export async function GET(): Promise<NextResponse<ApiResponse<{ available: boolean; cache: ReturnType<typeof ServerCache.getStats> }>>> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const action = request.nextUrl.searchParams.get('action');
+
+  if (action === 'unlock') {
+    const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().split('T')[0];
+    const tokens: Record<string, string> = {};
+    for (const cat of ['economy', 'investment']) {
+      tokens[cat] = generateUnlockToken(today, cat);
+    }
+    return NextResponse.json(
+      {
+        meta: { version: '1.0', status: 'success' },
+        data: { date: today, tokens },
+      },
+      { status: 200 },
+    );
+  }
+
   return NextResponse.json(
     {
       meta: {

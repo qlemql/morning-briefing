@@ -20,6 +20,11 @@ export default function Home() {
   const [isPremiumUnlocked, setIsPremiumUnlocked] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
 
+  // 페이지 로드 시 localStorage에서 unlock 상태 복원
+  useEffect(() => {
+    setIsPremiumUnlocked(CacheUtils.isPremiumUnlocked());
+  }, []);
+
   // Swipe gesture tracking
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
@@ -64,10 +69,17 @@ export default function Home() {
         return;
       }
 
-      // API 호출
+      // API 호출 (unlock 토큰 포함)
+      const unlockToken = CacheUtils.getUnlockToken(category);
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (unlockToken) {
+        headers['x-unlock-token'] = unlockToken;
+      }
       const response = await fetch('/api/briefing', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ category, date: today }),
       });
 
@@ -211,9 +223,28 @@ export default function Home() {
       {/* Paywall modal */}
       <PaywallOverlay
         isVisible={showPaywallModal}
-        onUnlock={() => {
+        onUnlock={async () => {
+          // 서버에서 HMAC 서명된 unlock 토큰 발급
+          try {
+            const res = await fetch('/api/briefing?action=unlock');
+            const json = await res.json();
+            const tokens = json.data?.tokens as Record<string, string> | undefined;
+
+            // localStorage에 날짜 + 서버 토큰 저장
+            CacheUtils.setPremiumUnlocked(tokens);
+          } catch {
+            // 토큰 발급 실패 시에도 UI는 unlock (서버 게이팅은 유지됨)
+            CacheUtils.setPremiumUnlocked();
+          }
+
           setIsPremiumUnlocked(true);
           setShowPaywallModal(false);
+
+          // 기존 캐시 클리어 후 unlock 토큰으로 재요청
+          setBriefings({});
+          const todayDate = CacheUtils.getTodayDate();
+          CacheUtils.clearBriefing('economy', todayDate);
+          CacheUtils.clearBriefing('investment', todayDate);
         }}
         onClose={() => setShowPaywallModal(false)}
         donationUrl={DONATION_URL || undefined}

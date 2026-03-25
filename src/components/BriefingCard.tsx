@@ -10,17 +10,13 @@ interface BriefingCardProps {
   isPaywalled: boolean;
   isPremiumUnlocked: boolean;
   onPaywallClick: () => void;
-  /** Stagger delay for entrance animation (ms) */
   delay?: number;
 }
 
-/** Copy card summary + title for sharing */
 function shareCard(card: BriefingCardType) {
   const text = `[아침 브리핑] ${card.title}\n${card.summary}`;
-
   if (typeof navigator !== 'undefined' && navigator.share) {
     navigator.share({ title: '아침 브리핑', text }).catch(() => {
-      // user cancelled or not supported — fall back to clipboard
       navigator.clipboard?.writeText(text);
     });
   } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -44,15 +40,14 @@ export default function BriefingCard({
   const shouldBlur = isPaywalled && !isPremiumUnlocked;
   const category = getCategoryById(categoryId);
   const typeInfo = CARD_TYPE_LABELS[card.type] || { label: card.type, icon: '📌' };
+  const isHeroCard = card.number === 1;
 
-  // Entrance animation stagger
   useEffect(() => {
     if (delay === 0) return;
     const t = setTimeout(() => setEntered(true), delay);
     return () => clearTimeout(t);
   }, [delay]);
 
-  // Measure content height for smooth accordion
   const measureHeight = useCallback(() => {
     if (contentRef.current) {
       setContentHeight(contentRef.current.scrollHeight);
@@ -63,45 +58,123 @@ export default function BriefingCard({
     measureHeight();
   }, [expanded, card.content, measureHeight]);
 
+  // Hero card (Card 1) — dark gradient background, white text
+  if (isHeroCard) {
+    return (
+      <div
+        className={`relative rounded-2xl overflow-hidden shadow-lg transition-all duration-400 ease-out ${
+          entered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
+        }`}
+      >
+        {/* Dark gradient background */}
+        <div className="card-gradient-hero">
+          <div
+            className="p-6 cursor-pointer active:opacity-90 transition-opacity"
+            onClick={() => setExpanded(!expanded)}
+          >
+            {/* Top row: badge + type */}
+            <div className="flex items-center gap-3 mb-4">
+              <span className={`${category.badgeClass} text-white text-xs font-bold px-2.5 py-1 rounded-full`}>
+                {typeInfo.icon} {typeInfo.label}
+              </span>
+              <span className="text-emerald-400 text-xs font-semibold tracking-wide">FREE</span>
+            </div>
+
+            {/* Title — large and bold */}
+            <h3 className="text-xl font-extrabold text-white leading-tight mb-2">
+              {card.title}
+            </h3>
+
+            {/* Summary */}
+            <p className="text-sm text-white/70 leading-relaxed">
+              {card.summary}
+            </p>
+
+            {/* Expand hint */}
+            <div className="mt-4 flex items-center gap-1.5">
+              <span className={`text-white/50 text-xs transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}>
+                ▼
+              </span>
+              <span className="text-white/40 text-xs">
+                {expanded ? '접기' : '자세히 보기'}
+              </span>
+            </div>
+          </div>
+
+          {/* Expanded content */}
+          <div
+            style={{ maxHeight: expanded ? (contentHeight ?? 1000) : 0 }}
+            className="overflow-hidden transition-[max-height] duration-300 ease-in-out"
+          >
+            <div ref={contentRef} className="px-6 pb-6">
+              <div className="border-t border-white/10 pt-4">
+                <div className="text-base text-white/90 leading-relaxed whitespace-pre-line">
+                  {card.content}
+                </div>
+                <div className="mt-4 flex items-center justify-between">
+                  {card.source && (
+                    <p className="text-xs text-white/40">출처: {card.source}</p>
+                  )}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); shareCard(card); }}
+                    className="text-xs text-white/40 hover:text-white/70 transition-colors flex items-center gap-1"
+                    aria-label="공유"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
+                      <polyline points="16 6 12 2 8 6" />
+                      <line x1="12" y1="2" x2="12" y2="15" />
+                    </svg>
+                    공유
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Cards 2-3 — clean white with accent border
   return (
     <div
-      className={`relative rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden transition-all duration-300 ease-out ${
+      className={`relative rounded-2xl bg-white overflow-hidden shadow-sm transition-all duration-400 ease-out ${
         entered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
-      }`}
+      } ${shouldBlur ? '' : 'border border-gray-100'}`}
     >
-      {/* Card header — always visible */}
       <div
-        className={`p-5 ${!shouldBlur ? 'cursor-pointer active:bg-gray-50 transition-colors' : ''}`}
+        className={`p-5 ${!shouldBlur ? 'cursor-pointer active:bg-gray-50/50 transition-colors' : ''}`}
         onClick={() => !shouldBlur && setExpanded(!expanded)}
       >
         <div className="flex items-start gap-4">
-          {/* Number badge */}
-          <div
-            className={`flex-shrink-0 w-10 h-10 rounded-full ${category.badgeClass} text-white flex items-center justify-center font-bold text-lg`}
-          >
-            {card.number}
+          {/* Number badge with category color ring */}
+          <div className={`flex-shrink-0 w-11 h-11 rounded-xl ${category.lightBg} flex items-center justify-center`}>
+            <span className={`${category.textClass} font-bold text-lg`}>{card.number}</span>
           </div>
 
           <div className="flex-1 min-w-0">
             {/* Type label */}
-            <span className={`inline-block text-xs font-medium ${category.textClass} mb-1`}>
-              {typeInfo.icon} {typeInfo.label}
-              {card.number === 1 && (
-                <span className="ml-2 text-green-600 font-semibold">FREE</span>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className={`text-xs font-semibold ${category.textClass}`}>
+                {typeInfo.icon} {typeInfo.label}
+              </span>
+              {shouldBlur && (
+                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">PRO</span>
               )}
-            </span>
+            </div>
 
             {/* Title */}
-            <h3 className="text-lg font-bold text-gray-900 leading-snug">{card.title}</h3>
+            <h3 className="text-base font-bold text-gray-900 leading-snug">{card.title}</h3>
 
             {/* Summary */}
-            <p className="mt-1 text-sm text-gray-500">{card.summary}</p>
+            <p className="mt-1 text-sm text-gray-500 leading-relaxed">{card.summary}</p>
           </div>
 
-          {/* Expand indicator with rotation animation */}
+          {/* Expand indicator */}
           {!shouldBlur && (
             <span
-              className={`text-gray-400 text-sm mt-1 transition-transform duration-200 ${
+              className={`text-gray-300 text-xs mt-2 transition-transform duration-200 ${
                 expanded ? 'rotate-180' : ''
               }`}
             >
@@ -117,29 +190,28 @@ export default function BriefingCard({
           style={{ maxHeight: expanded ? (contentHeight ?? 1000) : 0 }}
           className="overflow-hidden transition-[max-height] duration-300 ease-in-out"
         >
-          <div ref={contentRef} className="px-5 pb-5 border-t border-gray-50">
-            <div className="pt-4 text-base text-gray-700 leading-relaxed whitespace-pre-line">
-              {card.content}
-            </div>
-            <div className="mt-3 flex items-center justify-between">
-              {card.source && (
-                <p className="text-xs text-gray-400">출처: {card.source}</p>
-              )}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  shareCard(card);
-                }}
-                className="text-xs text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1"
-                aria-label="공유"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
-                  <polyline points="16 6 12 2 8 6" />
-                  <line x1="12" y1="2" x2="12" y2="15" />
-                </svg>
-                공유
-              </button>
+          <div ref={contentRef} className="px-5 pb-5">
+            <div className="border-t border-gray-50 pt-4">
+              <div className="text-[15px] text-gray-700 leading-relaxed whitespace-pre-line">
+                {card.content}
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                {card.source && (
+                  <p className="text-xs text-gray-400">출처: {card.source}</p>
+                )}
+                <button
+                  onClick={(e) => { e.stopPropagation(); shareCard(card); }}
+                  className="text-xs text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1"
+                  aria-label="공유"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
+                    <polyline points="16 6 12 2 8 6" />
+                    <line x1="12" y1="2" x2="12" y2="15" />
+                  </svg>
+                  공유
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -148,13 +220,13 @@ export default function BriefingCard({
       {/* Paywall overlay */}
       {shouldBlur && (
         <div className="px-5 pb-5">
-          <div className="relative rounded-xl bg-gray-50 p-6 text-center">
+          <div className="relative rounded-xl bg-gradient-to-br from-gray-50 to-gray-100/50 p-5 text-center">
             <div className="text-gray-400 text-sm mb-3">
-              이 카드의 전체 내용은 프리미엄 전용입니다
+              프리미엄 전용 콘텐츠
             </div>
             <button
               onClick={onPaywallClick}
-              className={`${category.badgeClass} text-white px-6 py-2.5 rounded-full font-semibold text-sm hover:opacity-90 active:scale-95 transition`}
+              className="bg-gray-900 text-white px-6 py-2.5 rounded-full font-semibold text-sm hover:bg-gray-800 active:scale-95 transition-all"
             >
               전체 브리핑 보기
             </button>
