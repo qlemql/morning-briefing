@@ -57,10 +57,77 @@ const INVESTMENT_SYSTEM_PROMPT = `당신은 한국 주식시장 및 글로벌 �
 다음 JSON만 출력. 마크다운이나 추가 설명 금지:
 {"cards":[{"id":"card_1","number":1,"title":"제목","content":"내용","summary":"요약","type":"오늘의핵심","source":"출처"},{"id":"card_2","number":2,"title":"제목","content":"내용","summary":"요약","type":"영향분석","source":"출처"},{"id":"card_3","number":3,"title":"제목","content":"내용","summary":"요약","type":"실전인사이트","source":"출처"}]}`;
 
+const LIFESTYLE_SYSTEM_PROMPT = `당신은 생활 트렌드 및 테크 전문 에디터입니다. 매일 아침 사람들의 일상에 영향을 미치는 IT/테크, 소비, 건강, 문화 트렌드를 분석합니다.
+
+역할:
+- IT/테크 분야의 주요 변화 (AI, 스마트폰, 서비스 업데이트 등)
+- 소비 트렌드 변화 (물가, 유통, 새로운 서비스)
+- 건강/라이프스타일 관련 실용 정보
+- MZ세대와 직장인에게 실질적으로 유용한 생활 정보
+
+카드 3개 작성 요구사항:
+1. 카드 1 - 오늘의핵심: 오늘 가장 흥미로운 생활/테크 뉴스. "이거 몰랐으면 손해" 느낌. 구체적 서비스명이나 제품명 포함 (무료 공개)
+2. 카드 2 - 영향분석: "이게 내 일상에 어떤 변화를 가져올까?" — 구체적으로 어떤 앱, 서비스, 습관이 바뀔 수 있는지 (유료)
+3. 카드 3 - 실전인사이트: "지금 당장 해볼 수 있는 것" — 앱 다운로드, 설정 변경, 구독 취소 등 5분 안에 실행 가능한 팁 (유료)
+
+작성 규칙:
+- 한국어, 친근하고 캐주얼한 톤. "~거든요", "~인데요", "~해보세요" 같은 자연스러운 말투
+- 각 카드 title은 20자 이내, summary는 60자 이내 (카드 2-3의 summary는 궁금증 유발)
+- content는 4~6문장으로 충실하게. 빈약한 내용 금지
+- 웹 검색으로 수집한 실시간 뉴스 기반
+- 출처(source)는 해당 내용이 나온 미디어/서비스를 기재
+- 광고성 내용 금지, 중립적 시각 유지
+
+다음 JSON만 출력. 마크다운이나 추가 설명 금지:
+{"cards":[{"id":"card_1","number":1,"title":"제목","content":"내용","summary":"요약","type":"오늘의핵심","source":"출처"},{"id":"card_2","number":2,"title":"제목","content":"내용","summary":"요약","type":"영향분석","source":"출처"},{"id":"card_3","number":3,"title":"제목","content":"내용","summary":"요약","type":"실전인사이트","source":"출처"}]}`;
+
 const SYSTEM_PROMPTS: Record<string, string> = {
   economy: ECONOMY_SYSTEM_PROMPT,
   investment: INVESTMENT_SYSTEM_PROMPT,
+  lifestyle: LIFESTYLE_SYSTEM_PROMPT,
 };
+
+/** Category-specific allowed domains for web search */
+function getAllowedDomains(category: string): string[] {
+  const common = [
+    'news.google.com',
+    'n.news.naver.com',
+    'news.naver.com',
+    'www.yna.co.kr',
+    'www.chosun.com',
+    'www.donga.com',
+  ];
+  const categoryDomains: Record<string, string[]> = {
+    economy: [
+      ...common,
+      'www.hankyung.com',
+      'www.mk.co.kr',
+      'www.sedaily.com',
+      'www.bloomberg.com',
+      'www.reuters.com',
+    ],
+    investment: [
+      ...common,
+      'www.hankyung.com',
+      'www.mk.co.kr',
+      'www.sedaily.com',
+      'finance.naver.com',
+      'www.bloomberg.com',
+      'www.reuters.com',
+    ],
+    lifestyle: [
+      ...common,
+      'www.bloter.net',
+      'zdnet.co.kr',
+      'www.itworld.co.kr',
+      'www.theverge.com',
+      'techcrunch.com',
+      'www.hani.co.kr',
+      'www.khan.co.kr',
+    ],
+  };
+  return categoryDomains[category] || categoryDomains.economy;
+}
 
 interface ClaudeResponse {
   cards: BriefingCard[];
@@ -98,7 +165,12 @@ export async function generateBriefing(
   category: string,
   date: string,
 ): Promise<BriefingCategory> {
-  const categoryKorean = category === 'economy' ? '경제/시사' : '투자';
+  const categoryMap: Record<string, string> = {
+    economy: '경제/시사',
+    investment: '투자',
+    lifestyle: '생활/테크',
+  };
+  const categoryKorean = categoryMap[category] || '경제/시사';
   const systemPrompt = SYSTEM_PROMPTS[category] || SYSTEM_PROMPTS.economy;
 
   const userPrompt = `오늘은 ${date}입니다. 오늘의 ${categoryKorean} 카테고리 아침 브리핑 카드 3장을 작성해주세요. 최신 뉴스를 웹에서 검색하여 반영해주세요.`;
@@ -120,20 +192,7 @@ export async function generateBriefing(
         {
           type: 'web_search_20250305',
           name: 'web_search',
-          allowed_domains: [
-            'news.google.com',
-            'n.news.naver.com',
-            'news.naver.com',
-            'www.hankyung.com',
-            'www.mk.co.kr',
-            'www.sedaily.com',
-            'www.yna.co.kr',
-            'www.chosun.com',
-            'www.donga.com',
-            'finance.naver.com',
-            'www.bloomberg.com',
-            'www.reuters.com',
-          ],
+          allowed_domains: getAllowedDomains(category),
         },
       ],
       messages: [

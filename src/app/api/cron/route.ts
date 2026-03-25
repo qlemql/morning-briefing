@@ -15,7 +15,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().split('T')[0];
-  const categories = ['economy', 'investment'];
+  const categories = ['economy', 'investment', 'lifestyle'];
   const results: Record<string, string> = {};
   const startTime = Date.now();
 

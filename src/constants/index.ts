@@ -21,6 +21,17 @@ export const CATEGORIES = [
     gradientClass: 'card-gradient-investment',
     lightBg: 'bg-amber-500/10',
   },
+  {
+    id: 'lifestyle',
+    name: '생활/테크',
+    color: 'violet',
+    bgClass: 'bg-violet-50',
+    textClass: 'text-violet-600',
+    badgeClass: 'bg-violet-500',
+    borderClass: 'border-violet-500',
+    gradientClass: 'card-gradient-lifestyle',
+    lightBg: 'bg-violet-500/10',
+  },
 ] as const;
 
 export const CARD_TYPE_LABELS: Record<string, { label: string; icon: string }> = {

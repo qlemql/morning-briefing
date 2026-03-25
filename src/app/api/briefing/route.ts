@@ -126,7 +126,7 @@ export async function POST(
     const { category, date } = body;
 
     // Validate category
-    if (!category || !['economy', 'investment'].includes(category)) {
+    if (!category || !['economy', 'investment', 'lifestyle'].includes(category)) {
       return NextResponse.json(
         {
           meta: {
@@ -137,7 +137,7 @@ export async function POST(
           },
           error: {
             code: 'INVALID_CATEGORY',
-            message: 'Category must be "economy" or "investment"',
+            message: 'Category must be "economy", "investment", or "lifestyle"',
           },
         },
         { status: 400 },
@@ -221,7 +221,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (action === 'unlock') {
     const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().split('T')[0];
     const tokens: Record<string, string> = {};
-    for (const cat of ['economy', 'investment']) {
+    for (const cat of ['economy', 'investment', 'lifestyle']) {
       tokens[cat] = generateUnlockToken(today, cat);
     }
     return NextResponse.json(
