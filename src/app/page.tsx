@@ -382,14 +382,54 @@ export default function Home() {
           </div>
         ) : null}
 
-        {/* Freshness indicator */}
+        {/* Copy entire briefing summary */}
+        {briefing && !loading && (
+          <button
+            onClick={async () => {
+              const catName = CATEGORIES.find(c => c.id === activeCategory)?.name || '';
+              const lines = briefing.cards
+                .filter((c) => c.number === 1 || isPremiumUnlocked)
+                .map((c) => `${c.number}. ${c.title}\n   ${c.summary}`);
+              const text = `[아침 브리핑 · ${catName}] ${getTodayLabel()}\n\n${lines.join('\n\n')}\n\n👉 https://morning-briefing-mocha.vercel.app`;
+              if (navigator.clipboard) {
+                await navigator.clipboard.writeText(text);
+                hapticLight();
+                showToast('브리핑 요약이 복사되었어요!', '📋');
+                track('copy_briefing', { category: activeCategory });
+              }
+            }}
+            className="mx-auto flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors py-2"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+            </svg>
+            브리핑 요약 복사
+          </button>
+        )}
+
+        {/* Freshness indicator with relative time */}
         {briefing?.generatedAt && (
           <p className="text-center text-xs text-gray-300 dark:text-gray-600 pt-2">
             {(() => {
               const gen = new Date(briefing.generatedAt);
+              const now = new Date();
+              const diffMs = now.getTime() - gen.getTime();
+              const diffMin = Math.floor(diffMs / 60000);
               const h = gen.getHours();
               const m = gen.getMinutes();
-              return `${h < 10 ? '0' : ''}${h}:${m < 10 ? '0' : ''}${m} 생성`;
+              const timeStr = `${h < 10 ? '0' : ''}${h}:${m < 10 ? '0' : ''}${m}`;
+
+              if (diffMin < 1) return `방금 생성됨`;
+              if (diffMin < 60) return `${diffMin}분 전 생성 (${timeStr})`;
+              if (diffMin < 1440) return `${Math.floor(diffMin / 60)}시간 전 생성 (${timeStr})`;
+              return `${timeStr} 생성`;
+            })()}
+            {' · '}
+            {(() => {
+              const totalChars = briefing.cards.reduce((sum, c) => sum + (c.content?.length || 0), 0);
+              const readMin = Math.max(1, Math.ceil(totalChars / 500));
+              return `읽기 ${readMin}분`;
             })()}
           </p>
         )}

@@ -25,7 +25,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     if (event === 'page_view') {
       await trackPageView(visitorId, category);
-    } else if (['share', 'share_app', 'paywall_click', 'unlock', 'email_subscribed', 'card_toggle', 'pwa_installed', 'pwa_install_click', 'notif_subscribed', 'notif_subscribe_click', 'web_vital', 'client_error'].includes(event)) {
+    } else if (['share', 'share_app', 'copy_briefing', 'paywall_click', 'unlock', 'email_subscribed', 'card_toggle', 'pwa_installed', 'pwa_install_click', 'notif_subscribed', 'notif_subscribe_click', 'web_vital', 'client_error'].includes(event)) {
       await trackEvent(event);
     }
 
