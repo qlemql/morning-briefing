@@ -13,8 +13,8 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: '아침 브리핑 — AI가 매일 아침 정리하는 뉴스',
-  description: 'AI가 매일 아침 경제·투자 뉴스를 3장의 카드로 정리해드립니다. 핵심 뉴스, 영향 분석, 실전 인사이트.',
-  keywords: ['뉴스', '브리핑', '경제', '투자', 'AI', '아침뉴스', '뉴스요약'],
+  description: 'AI가 매일 아침 경제·투자·생활 뉴스를 3장의 카드로 정리해드립니다. 핵심 뉴스, 영향 분석, 실전 인사이트.',
+  keywords: ['뉴스', '브리핑', '경제', '투자', '생활', '테크', 'AI', '아침뉴스', '뉴스요약'],
   manifest: '/manifest.json',
   icons: [
     { rel: 'icon', url: '/favicon.ico', sizes: '32x32' },
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: '아침 브리핑 — AI 뉴스 브리핑',
-    description: 'AI가 매일 아침 경제·투자 뉴스를 3장의 카드로 정리해드립니다.',
+    description: 'AI가 매일 아침 경제·투자·생활 뉴스를 3장의 카드로 정리해드립니다.',
     type: 'website',
     locale: 'ko_KR',
     siteName: '아침 브리핑',
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: '아침 브리핑 — AI 뉴스 브리핑',
-    description: 'AI가 매일 아침 경제·투자 뉴스를 3장의 카드로 정리해드립니다.',
+    description: 'AI가 매일 아침 경제·투자·생활 뉴스를 3장의 카드로 정리해드립니다.',
     images: ['/api/og'],
   },
   other: {
@@ -65,7 +65,7 @@ export default function RootLayout({
               '@context': 'https://schema.org',
               '@type': 'WebApplication',
               name: '아침 브리핑',
-              description: 'AI가 매일 아침 경제·투자 뉴스를 3장의 카드로 정리해드립니다.',
+              description: 'AI가 매일 아침 경제·투자·생활 뉴스를 3장의 카드로 정리해드립니다.',
               url: 'https://morning-briefing-mocha.vercel.app',
               applicationCategory: 'NewsApplication',
               operatingSystem: 'Web',
