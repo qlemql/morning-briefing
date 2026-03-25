@@ -180,7 +180,7 @@ export default function AdminPage() {
             )}
             <button
               onClick={() => fetchData(secret)}
-              className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-300 transition-colors"
+              className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300 transition-colors"
             >
               새로고침
             </button>
@@ -192,7 +192,7 @@ export default function AdminPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-bold text-gray-900 dark:text-gray-100">브리핑 수동 생성</h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-1">오늘자 브리핑을 즉시 생성합니다 (3 카테고리)</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">오늘자 브리핑을 즉시 생성합니다 (3 카테고리)</p>
             </div>
             <button
               onClick={triggerCron}
@@ -227,7 +227,7 @@ export default function AdminPage() {
           <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 mb-6">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-bold text-gray-900 dark:text-gray-100">API 예산</h2>
-              <span className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
                 오늘 {budget.calls}회 호출 · ~${(budget.estimatedCostCents / 100).toFixed(2)} / ${(budget.budgetCents / 100).toFixed(2)}
               </span>
             </div>
@@ -266,7 +266,7 @@ export default function AdminPage() {
               {Object.entries(analytics.today.categoryViews).map(([cat, count]) => (
                 <div key={cat} className="text-center">
                   <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{count}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-1">{CATEGORY_LABELS[cat] || cat}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{CATEGORY_LABELS[cat] || cat}</div>
                 </div>
               ))}
             </div>
@@ -277,10 +277,28 @@ export default function AdminPage() {
         {analytics?.history && analytics.history.length > 0 && (
           <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 mb-8">
             <h2 className="font-bold text-gray-900 dark:text-gray-100 mb-4">최근 7일</h2>
+            {/* Mini bar chart */}
+            {(() => {
+              const maxPV = Math.max(...analytics.history.map(d => d.pageViews), 1);
+              return (
+                <div className="flex items-end gap-1.5 h-20 mb-4">
+                  {analytics.history.map((day) => (
+                    <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
+                      <span className="text-[10px] text-gray-400 dark:text-gray-500">{day.pageViews || ''}</span>
+                      <div
+                        className="w-full bg-gray-900 dark:bg-gray-300 rounded-t transition-all"
+                        style={{ height: `${Math.max(2, (day.pageViews / maxPV) * 48)}px` }}
+                      />
+                      <span className="text-[10px] text-gray-400 dark:text-gray-500">{day.date.slice(5)}</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-gray-500 dark:text-gray-400 dark:text-gray-500 border-b">
+                  <tr className="text-left text-gray-500 dark:text-gray-400 border-b">
                     <th className="pb-2 pr-4">날짜</th>
                     <th className="pb-2 pr-4">PV</th>
                     <th className="pb-2 pr-4">UV</th>
@@ -364,7 +382,7 @@ function KPICard({ label, value, icon }: { label: string; value: string | number
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
       <div className="flex items-center gap-2 mb-1">
         <span className="text-lg">{icon}</span>
-        <span className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500">{label}</span>
+        <span className="text-xs text-gray-500 dark:text-gray-400">{label}</span>
       </div>
       <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{value}</div>
     </div>
