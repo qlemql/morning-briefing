@@ -26,7 +26,9 @@ const DONATION_URL = 'https://qr.kakaopay.com/Fa0mKvPtZ';
 const SWIPE_THRESHOLD = 60;
 const MAX_RETRIES = 2;
 
-/** Fetch with retry and exponential backoff */
+const REQUEST_TIMEOUT_MS = 30000;
+
+/** Fetch with timeout, retry, and exponential backoff */
 async function fetchWithRetry(
   url: string,
   options: RequestInit,
@@ -34,7 +36,10 @@ async function fetchWithRetry(
 ): Promise<Response> {
   for (let i = 0; i <= retries; i++) {
     try {
-      const res = await fetch(url, options);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+      const res = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timeoutId);
       // Don't retry client errors (4xx) except 429
       if (res.ok || (res.status >= 400 && res.status < 500 && res.status !== 429)) return res;
       if (i === retries) return res;
@@ -230,10 +235,15 @@ export default function Home() {
     await loadBriefing(activeCategory);
   }, [activeCategory, loadBriefing]);
 
-  // Dynamic page title based on category
+  // Dynamic page title + URL based on category
   useEffect(() => {
     const catName = CATEGORIES.find(c => c.id === activeCategory)?.name || '';
     document.title = `${catName} · 아침 브리핑`;
+    // Update URL for deep linking without reload
+    const url = activeCategory === 'economy'
+      ? window.location.pathname
+      : `${window.location.pathname}?category=${activeCategory}`;
+    window.history.replaceState(null, '', url);
   }, [activeCategory]);
 
   useEffect(() => {
