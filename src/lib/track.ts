@@ -20,3 +20,13 @@ export function track(event: string, data?: Record<string, string>): void {
     }).catch(() => {});
   }
 }
+
+/**
+ * Track client-side errors for debugging
+ */
+export function trackError(error: string, context?: string): void {
+  track('client_error', {
+    error: error.substring(0, 200),
+    ...(context ? { context } : {}),
+  });
+}

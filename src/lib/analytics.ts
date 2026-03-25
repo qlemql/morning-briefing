@@ -59,6 +59,7 @@ export async function trackEvent(
     notif_subscribed: `mb:notif:${date}`,
     notif_subscribe_click: `mb:notif_click:${date}`,
     share_app: `mb:share_app:${date}`,
+    client_error: `mb:errors:${date}`,
   };
   const key = keyMap[event];
   if (!key) return;
