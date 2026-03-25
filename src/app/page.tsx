@@ -32,6 +32,8 @@ export default function Home() {
       .then((r) => r.json())
       .then((d) => { if (d.unlocked) setIsPremiumUnlocked(true); })
       .catch(() => {});
+    // 3) 오래된 캐시 정리
+    CacheUtils.cleanupOldCache();
     track('page_view', { category: 'economy' });
   }, []);
 

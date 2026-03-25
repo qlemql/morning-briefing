@@ -83,6 +83,31 @@ export const CacheUtils = {
   },
 
   /**
+   * Clean up old cache entries (keep only last 3 days)
+   * Should be called periodically to prevent localStorage bloat
+   */
+  cleanupOldCache: (): void => {
+    if (typeof window === 'undefined') return;
+    try {
+      const today = new Date(Date.now() + 9 * 3600 * 1000);
+      const threeDaysAgo = new Date(today);
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      const cutoff = threeDaysAgo.toISOString().split('T')[0];
+
+      Object.keys(localStorage).forEach((key) => {
+        if (!key.startsWith('briefing_')) return;
+        // Extract date from key: briefing_{category}_{YYYY-MM-DD}
+        const dateMatch = key.match(/\d{4}-\d{2}-\d{2}$/);
+        if (dateMatch && dateMatch[0] < cutoff) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch {
+      // cleanup is non-critical
+    }
+  },
+
+  /**
    * Get today's date in YYYY-MM-DD format (KST)
    */
   getTodayDate: (): string => {
