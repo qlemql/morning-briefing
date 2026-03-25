@@ -76,6 +76,8 @@ export default function Home() {
     setTimeout(() => {
       setActiveCategory(newCategory);
       setTransitioning(false);
+      // Scroll to top on category switch
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }, 120);
   }, [activeCategory]);
 
@@ -299,8 +301,8 @@ export default function Home() {
         {loading && !briefing ? (
           <>
             <CardSkeleton isHero />
-            <CardSkeleton />
-            <CardSkeleton />
+            <CardSkeleton delay={100} />
+            <CardSkeleton delay={200} />
           </>
         ) : briefing ? (
           briefing.cards.map((card, index) => (
@@ -318,6 +320,10 @@ export default function Home() {
           <div className="text-center py-16">
             <div className="text-3xl mb-3">☕</div>
             <p className="text-gray-400 text-sm">오늘의 브리핑을 준비하고 있어요</p>
+            {typeof navigator !== 'undefined' && 'connection' in navigator &&
+              (navigator as unknown as { connection: { effectiveType: string } }).connection?.effectiveType === 'slow-2g' && (
+              <p className="text-gray-300 text-xs mt-2">느린 네트워크가 감지되었어요. 잠시만 기다려주세요.</p>
+            )}
           </div>
         ) : null}
 

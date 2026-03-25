@@ -1,9 +1,11 @@
 'use client';
 
-export default function CardSkeleton({ isHero = false }: { isHero?: boolean }) {
+export default function CardSkeleton({ isHero = false, delay = 0 }: { isHero?: boolean; delay?: number }) {
+  const style = delay > 0 ? { animationDelay: `${delay}ms`, opacity: 0, animation: `fadeSlideUp 0.4s ease-out ${delay}ms forwards` } : {};
+
   if (isHero) {
     return (
-      <div className="rounded-2xl overflow-hidden shadow-lg">
+      <div className="rounded-2xl overflow-hidden shadow-lg" style={style}>
         <div className="card-gradient-hero p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="h-6 w-24 rounded-full bg-white/10 skeleton-shimmer" />
@@ -17,7 +19,7 @@ export default function CardSkeleton({ isHero = false }: { isHero?: boolean }) {
   }
 
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5">
+    <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5" style={style}>
       <div className="flex items-start gap-4">
         <div className="w-11 h-11 rounded-xl bg-gray-100 skeleton-shimmer flex-shrink-0" />
         <div className="flex-1">
