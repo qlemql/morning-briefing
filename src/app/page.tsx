@@ -23,9 +23,15 @@ export default function Home() {
   const [isPremiumUnlocked, setIsPremiumUnlocked] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
 
-  // 페이지 로드 시 localStorage에서 unlock 상태 복원
+  // 페이지 로드 시 localStorage + 서버에서 unlock 상태 복원
   useEffect(() => {
+    // 1) 클라이언트 캐시 먼저 (빠른 UI 반영)
     setIsPremiumUnlocked(CacheUtils.isPremiumUnlocked());
+    // 2) 서버 상태 동기화
+    fetch('/api/unlock')
+      .then((r) => r.json())
+      .then((d) => { if (d.unlocked) setIsPremiumUnlocked(true); })
+      .catch(() => {});
     track('page_view', { category: 'economy' });
   }, []);
 
@@ -242,6 +248,8 @@ export default function Home() {
             CacheUtils.setPremiumUnlocked();
           }
 
+          // 서버에 unlock 상태 기록 (Redis 저장)
+          fetch('/api/unlock', { method: 'POST' }).catch(() => {});
           track('unlock');
           setIsPremiumUnlocked(true);
           setShowPaywallModal(false);
