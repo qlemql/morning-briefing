@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { BriefingCard, BriefingCategory } from './types';
+import { canAffordCall, recordCall } from './budget';
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -175,6 +176,15 @@ export async function generateBriefing(
 
   const userPrompt = `오늘은 ${date}입니다. 오늘의 ${categoryKorean} 카테고리 아침 브리핑 카드 3장을 작성해주세요. 최신 뉴스를 웹에서 검색하여 반영해주세요.`;
 
+  // Budget guard — prevent overspending
+  const budget = await canAffordCall();
+  if (!budget.allowed) {
+    console.warn(
+      `[Claude] Budget exceeded! Calls today: ${budget.callsToday}, Spent: ${budget.spent}¢ / ${budget.budget}¢`,
+    );
+    throw new Error('Daily API budget exceeded');
+  }
+
   console.log(`[Claude] Generating ${category} briefing with web_search for ${date}...`);
 
   const message = await withRetry(() =>
@@ -279,6 +289,9 @@ export async function generateBriefing(
     type: card.type || (['오늘의핵심', '영향분석', '실전인사이트'][index] as BriefingCard['type']),
     source: card.source,
   }));
+
+  // Record API call for budget tracking
+  await recordCall();
 
   return {
     category,

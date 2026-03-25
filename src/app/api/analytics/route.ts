@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { trackPageView, trackEvent, getStats, getAllStats } from '@/lib/analytics';
+import { getBudgetStatus } from '@/lib/budget';
 
 /**
  * POST /api/analytics — track events from client
@@ -44,9 +45,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   const date = request.nextUrl.searchParams.get('date') || undefined;
+  const [stats, budget] = await Promise.all([
+    date ? getStats(date) : getStats(),
+    getBudgetStatus(),
+  ]);
   const data = date
-    ? await getStats(date)
-    : { today: await getStats(), history: await getAllStats() };
+    ? stats
+    : { today: stats, history: await getAllStats(), budget };
 
   return NextResponse.json({ data }, { status: 200 });
 }
