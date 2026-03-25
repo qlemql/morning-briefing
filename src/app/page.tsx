@@ -5,6 +5,7 @@ import CategoryTab from '@/components/CategoryTab';
 import BriefingCard from '@/components/BriefingCard';
 import CardSkeleton from '@/components/CardSkeleton';
 import PullToRefresh from '@/components/PullToRefresh';
+import StreakBadge from '@/components/StreakBadge';
 import ToastContainer, { showToast } from '@/components/Toast';
 
 // Lazy-load non-critical overlays (not needed for initial render)
@@ -284,8 +285,9 @@ export default function Home() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">아침 브리핑</h1>
-              <p className="text-sm text-gray-400 mt-0.5">
-                {getTodayLabel()} · {new Date().getHours() < 12 ? '좋은 아침이에요' : new Date().getHours() < 18 ? '좋은 오후예요' : '좋은 저녁이에요'}
+              <p className="text-sm text-gray-400 mt-0.5 flex items-center gap-2">
+                <span>{getTodayLabel()} · {new Date().getHours() < 12 ? '좋은 아침이에요' : new Date().getHours() < 18 ? '좋은 오후예요' : '좋은 저녁이에요'}</span>
+                <StreakBadge />
               </p>
             </div>
             {isPremiumUnlocked && (
