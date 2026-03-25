@@ -58,6 +58,7 @@ export async function trackEvent(
     pwa_install_click: `mb:pwa_click:${date}`,
     notif_subscribed: `mb:notif:${date}`,
     notif_subscribe_click: `mb:notif_click:${date}`,
+    share_app: `mb:share_app:${date}`,
   };
   const key = keyMap[event];
   if (!key) return;
