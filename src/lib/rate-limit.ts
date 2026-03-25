@@ -10,7 +10,7 @@
  *   // 10 requests per 60 seconds per IP
  */
 
-import { kvIncr, kvGet, kvExpire, isRedisConfigured } from './kv';
+import { kvIncr, kvExpire, isRedisConfigured } from './kv';
 
 interface RateLimitResult {
   success: boolean;

@@ -14,7 +14,7 @@
  *   3 categories/day = ~$0.09/day (within budget)
  */
 
-import { kvGet, kvSet, kvIncr, kvExpire } from './kv';
+import { kvGet, kvIncr, kvExpire } from './kv';
 
 const DAILY_BUDGET_CENTS = 20; // $0.20 per day (with some buffer)
 const ESTIMATED_COST_PER_CALL_CENTS = 3; // ~$0.03 per briefing generation

@@ -103,28 +103,6 @@ export default memo(function BriefingCard({
     measureHeight();
   }, [expanded, card.content, measureHeight]);
 
-  // Shared share button component
-  const ShareButton = ({ dark }: { dark?: boolean }) => (
-    <button
-      onClick={handleShare}
-      className={`text-xs ${
-        dark
-          ? 'text-white/40 hover:text-white/70'
-          : 'text-gray-400 hover:text-gray-600'
-      } transition-colors flex items-center gap-1`}
-      aria-label={`${card.title} 공유하기`}
-    >
-      {showCopied ? (
-        <span className={dark ? 'text-emerald-400' : 'text-emerald-500'}>복사됨!</span>
-      ) : (
-        <>
-          <ShareIcon />
-          공유
-        </>
-      )}
-    </button>
-  );
-
   // Hero card (Card 1) — dark gradient background, white text
   if (isHeroCard) {
     return (
@@ -188,7 +166,20 @@ export default memo(function BriefingCard({
                   {card.source && (
                     <p className="text-xs text-white/40">출처: {card.source}</p>
                   )}
-                  <ShareButton dark />
+                  <button
+                    onClick={handleShare}
+                    className="text-xs text-white/40 hover:text-white/70 transition-colors flex items-center gap-1"
+                    aria-label={`${card.title} 공유하기`}
+                  >
+                    {showCopied ? (
+                      <span className="text-emerald-400">복사됨!</span>
+                    ) : (
+                      <>
+                        <ShareIcon />
+                        공유
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
             </div>
@@ -264,7 +255,20 @@ export default memo(function BriefingCard({
                 {card.source && (
                   <p className="text-xs text-gray-400">출처: {card.source}</p>
                 )}
-                <ShareButton />
+                <button
+                  onClick={handleShare}
+                  className="text-xs text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1"
+                  aria-label={`${card.title} 공유하기`}
+                >
+                  {showCopied ? (
+                    <span className="text-emerald-500">복사됨!</span>
+                  ) : (
+                    <>
+                      <ShareIcon />
+                      공유
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>
