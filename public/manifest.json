@@ -1,7 +1,9 @@
 {
   "name": "아침 브리핑",
   "short_name": "아침브리핑",
-  "description": "AI가 매일 아침 정리해주는 경제·투자 뉴스 브리핑",
+  "description": "AI가 매일 아침 정리해주는 경제·투자·생활 뉴스 브리핑",
+  "categories": ["news", "business", "lifestyle"],
+  "lang": "ko",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f5f5f7",
