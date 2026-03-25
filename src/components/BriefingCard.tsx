@@ -275,14 +275,17 @@ export default memo(function BriefingCard({
       {shouldBlur && (
         <div className="px-5 pb-5">
           <div className="relative rounded-xl bg-gradient-to-br from-gray-50 to-gray-100/50 p-5 text-center">
-            <p className="text-gray-400 text-sm mb-3">
-              프리미엄 전용 콘텐츠
+            <p className="text-gray-400 text-sm mb-1">
+              {card.number === 2 ? '이 뉴스가 나에게 미치는 영향은?' : '지금 당장 할 수 있는 행동은?'}
+            </p>
+            <p className="text-gray-300 text-xs mb-3">
+              커피 한 잔으로 전체 브리핑을 열어보세요
             </p>
             <button
               onClick={onPaywallClick}
               className="bg-gray-900 text-white px-6 py-2.5 rounded-full font-semibold text-sm hover:bg-gray-800 active:scale-95 transition-all"
             >
-              전체 브리핑 보기
+              ☕ 전체 브리핑 보기
             </button>
           </div>
         </div>
