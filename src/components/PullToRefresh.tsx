@@ -71,7 +71,7 @@ export default function PullToRefresh({ onRefresh, children }: PullToRefreshProp
           }`}
           style={{ transform: refreshing ? undefined : `rotate(${progress * 360}deg)` }}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400 dark:text-gray-500">
             <path d="M21 12a9 9 0 1 1-6.219-8.56" strokeLinecap="round" />
           </svg>
         </div>
