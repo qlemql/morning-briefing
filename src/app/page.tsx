@@ -7,6 +7,7 @@ import CardSkeleton from '@/components/CardSkeleton';
 import PullToRefresh from '@/components/PullToRefresh';
 import StreakBadge from '@/components/StreakBadge';
 import ThemeToggle from '@/components/ThemeToggle';
+import TrialBanner from '@/components/TrialBanner';
 import ToastContainer, { showToast } from '@/components/Toast';
 
 // Lazy-load non-critical overlays (not needed for initial render)
@@ -329,6 +330,9 @@ export default function Home() {
           />
         </div>
       </header>
+
+      {/* Trial period banner */}
+      <TrialBanner />
 
       {/* Error banner */}
       {error && (
