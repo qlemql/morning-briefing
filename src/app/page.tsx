@@ -14,7 +14,7 @@ import { BriefingCategory } from '@/lib/types';
 import { CacheUtils } from '@/lib/cache';
 import { getTodayLabel, CATEGORIES } from '@/constants';
 import { track } from '@/lib/track';
-import { hapticMedium } from '@/lib/haptic';
+import { hapticLight, hapticMedium } from '@/lib/haptic';
 
 const DONATION_URL = 'https://qr.kakaopay.com/Fa0mKvPtZ';
 const SWIPE_THRESHOLD = 60;
@@ -272,6 +272,8 @@ export default function Home() {
             {error.type !== 'stale' && error.type !== 'budget' && (
               <button
                 onClick={() => {
+                  hapticLight();
+                  setError(null);
                   setBriefings((prev) => {
                     const next = { ...prev };
                     delete next[activeCategory];
@@ -279,7 +281,7 @@ export default function Home() {
                   });
                   loadBriefing(activeCategory);
                 }}
-                className="ml-auto text-xs font-medium underline"
+                className="ml-auto text-xs font-medium underline active:scale-95 transition-transform"
               >
                 재시도
               </button>
