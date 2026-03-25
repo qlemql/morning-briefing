@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, startTransition } from 'react';
 import { APP_VERSION } from '@/lib/version';
 
 const CHANGELOG: Record<string, string> = {
@@ -23,11 +23,13 @@ export default function UpdateBanner() {
       return;
     }
     if (seen !== APP_VERSION && CHANGELOG[APP_VERSION]) {
-      setMessage(CHANGELOG[APP_VERSION]);
-      setShow(true);
+      startTransition(() => {
+        setMessage(CHANGELOG[APP_VERSION]);
+        setShow(true);
+      });
       localStorage.setItem(SEEN_KEY, APP_VERSION);
       // Auto-dismiss after 8s
-      const t = setTimeout(() => setShow(false), 8000);
+      const t = setTimeout(() => startTransition(() => setShow(false)), 8000);
       return () => clearTimeout(t);
     }
   }, []);

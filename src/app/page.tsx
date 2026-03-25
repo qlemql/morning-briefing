@@ -206,7 +206,7 @@ export default function Home() {
         setBriefings((prev) => ({ ...prev, [category]: data.data }));
         CacheUtils.setBriefing(category, today, data.data);
       }
-    } catch (err) {
+    } catch {
       // 네트워크 에러 — 캐시 폴백
       const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
       const fallback = CacheUtils.getBriefing(category, yesterday);

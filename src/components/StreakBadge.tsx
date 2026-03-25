@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, startTransition } from 'react';
 
 const STREAK_KEY = 'mb_streak';
 const LAST_VISIT_KEY = 'mb_last_visit';
@@ -26,8 +26,10 @@ export default function StreakBadge() {
 
     if (lastVisit === today) {
       // Already visited today
-      setStreak(currentStreak);
-      if (currentStreak >= 3) setShowBadge(true);
+      startTransition(() => {
+        setStreak(currentStreak);
+        if (currentStreak >= 3) setShowBadge(true);
+      });
       return;
     }
 
@@ -41,11 +43,11 @@ export default function StreakBadge() {
 
     localStorage.setItem(STREAK_KEY, String(currentStreak));
     localStorage.setItem(LAST_VISIT_KEY, today);
-    setStreak(currentStreak);
+    startTransition(() => setStreak(currentStreak));
 
     // Show badge animation for streaks >= 3
     if (currentStreak >= 3) {
-      setTimeout(() => setShowBadge(true), 2000);
+      setTimeout(() => startTransition(() => setShowBadge(true)), 2000);
     }
   }, []);
 

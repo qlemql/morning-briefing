@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, startTransition } from 'react';
 import { hapticMedium } from '@/lib/haptic';
 
 interface PaywallOverlayProps {
@@ -170,17 +170,17 @@ export default function PaywallOverlay({
 
   useEffect(() => {
     if (isVisible) {
-      setMounted(true);
+      startTransition(() => setMounted(true));
       hapticMedium();
       // Trigger entrance animation after mount
       requestAnimationFrame(() => {
-        requestAnimationFrame(() => setAnimateIn(true));
+        requestAnimationFrame(() => startTransition(() => setAnimateIn(true)));
       });
       // Prevent body scroll when modal is open
       document.body.style.overflow = 'hidden';
     } else {
-      setAnimateIn(false);
-      const t = setTimeout(() => setMounted(false), 300);
+      startTransition(() => setAnimateIn(false));
+      const t = setTimeout(() => startTransition(() => setMounted(false)), 300);
       document.body.style.overflow = '';
       return () => clearTimeout(t);
     }
