@@ -177,7 +177,20 @@ export default memo(function BriefingCard({
                 </div>
                 <div className="mt-4 flex items-center justify-between">
                   {card.source && (
-                    <p className="text-xs text-white/40">출처: {card.source}</p>
+                    <p className="text-xs text-white/40">
+                      출처:{' '}
+                      {card.sourceUrl ? (
+                        <a
+                          href={card.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => { e.stopPropagation(); track('source_click', { card: card.id }); }}
+                          className="underline hover:text-white/60 transition-colors"
+                        >
+                          {card.source} ↗
+                        </a>
+                      ) : card.source}
+                    </p>
                   )}
                   <button
                     onClick={handleShare}
@@ -271,7 +284,20 @@ export default memo(function BriefingCard({
               </div>
               <div className="mt-3 flex items-center justify-between">
                 {card.source && (
-                  <p className="text-xs text-gray-400 dark:text-gray-500">출처: {card.source}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                    출처:{' '}
+                    {card.sourceUrl ? (
+                      <a
+                        href={card.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => { e.stopPropagation(); track('source_click', { card: card.id }); }}
+                        className="underline hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                      >
+                        {card.source} ↗
+                      </a>
+                    ) : card.source}
+                  </p>
                 )}
                 <button
                   onClick={handleShare}

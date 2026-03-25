@@ -26,8 +26,11 @@ export interface BriefingCard {
   /** Card category/type for styling (e.g., "hook", "impact", "insight") */
   type: "오늘의핵심" | "영향분석" | "실전인사이트";
 
-  /** Optional source URL or publication name */
+  /** Source publication name (e.g., "한국경제", "Bloomberg") */
   source?: string;
+
+  /** Direct URL to the original news article */
+  sourceUrl?: string;
 }
 
 /**

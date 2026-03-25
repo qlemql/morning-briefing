@@ -157,4 +157,98 @@ export const CacheUtils = {
       return '';
     }
   },
+
+  // ── 7-Day Free Trial ──
+
+  /**
+   * Get the date when the user first visited (trial start)
+   * Returns ISO date string (YYYY-MM-DD) or null
+   */
+  getTrialStartDate: (): string | null => {
+    if (typeof window === 'undefined') return null;
+    try {
+      return localStorage.getItem('mb_trial_start');
+    } catch {
+      return null;
+    }
+  },
+
+  /**
+   * Initialize trial start date if not already set
+   * Returns the trial start date
+   */
+  initTrial: (): string => {
+    if (typeof window === 'undefined') return CacheUtils.getTodayDate();
+    try {
+      const existing = localStorage.getItem('mb_trial_start');
+      if (existing) return existing;
+      const today = CacheUtils.getTodayDate();
+      localStorage.setItem('mb_trial_start', today);
+      return today;
+    } catch {
+      return CacheUtils.getTodayDate();
+    }
+  },
+
+  /**
+   * Check if user is within 7-day trial period
+   */
+  isInTrialPeriod: (): boolean => {
+    if (typeof window === 'undefined') return true;
+    try {
+      const startStr = localStorage.getItem('mb_trial_start');
+      if (!startStr) return true; // No start date = first visit = trial active
+      const start = new Date(startStr + 'T00:00:00+09:00');
+      const now = new Date(Date.now() + 9 * 3600 * 1000);
+      const diffDays = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      return diffDays < 7;
+    } catch {
+      return true;
+    }
+  },
+
+  /**
+   * Get remaining trial days (0 = trial expired)
+   */
+  getTrialDaysRemaining: (): number => {
+    if (typeof window === 'undefined') return 7;
+    try {
+      const startStr = localStorage.getItem('mb_trial_start');
+      if (!startStr) return 7;
+      const start = new Date(startStr + 'T00:00:00+09:00');
+      const now = new Date(Date.now() + 9 * 3600 * 1000);
+      const diffDays = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      return Math.max(0, 7 - diffDays);
+    } catch {
+      return 7;
+    }
+  },
+
+  /**
+   * Check if user has an active subscription
+   */
+  isSubscribed: (): boolean => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return localStorage.getItem('mb_subscribed') === 'true';
+    } catch {
+      return false;
+    }
+  },
+
+  /**
+   * Set subscription status
+   */
+  setSubscribed: (subscribed: boolean): void => {
+    if (typeof window === 'undefined') return;
+    try {
+      if (subscribed) {
+        localStorage.setItem('mb_subscribed', 'true');
+      } else {
+        localStorage.removeItem('mb_subscribed');
+      }
+    } catch {
+      // non-critical
+    }
+  },
 };

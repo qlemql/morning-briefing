@@ -73,15 +73,27 @@ export default function Home() {
   const [slowLoading, setSlowLoading] = useState(false);
   const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 페이지 로드 시 localStorage + 서버에서 unlock 상태 복원
+  // 페이지 로드 시 unlock 상태 복원 (7일 체험 + 후원 + 서버)
   useEffect(() => {
-    // 1) 클라이언트 캐시 먼저 (빠른 UI 반영)
-    setIsPremiumUnlocked(CacheUtils.isPremiumUnlocked());
-    // 2) 서버 상태 동기화
-    fetch('/api/unlock')
-      .then((r) => r.json())
-      .then((d) => { if (d.unlocked) setIsPremiumUnlocked(true); })
-      .catch(() => {});
+    // 0) 7일 무료체험 초기화 (첫 방문 시 시작일 기록)
+    CacheUtils.initTrial();
+
+    // 1) 체험 기간 또는 후원 unlock 확인
+    const inTrial = CacheUtils.isInTrialPeriod();
+    const dailyUnlock = CacheUtils.isPremiumUnlocked();
+    const subscribed = CacheUtils.isSubscribed();
+    if (inTrial || dailyUnlock || subscribed) {
+      setIsPremiumUnlocked(true);
+    }
+
+    // 2) 서버 상태 동기화 (Redis 기반)
+    if (!inTrial && !subscribed) {
+      fetch('/api/unlock')
+        .then((r) => r.json())
+        .then((d) => { if (d.unlocked) setIsPremiumUnlocked(true); })
+        .catch(() => {});
+    }
+
     // 3) 오래된 캐시 정리
     CacheUtils.cleanupOldCache();
     track('page_view', { category: 'economy' });
@@ -293,11 +305,22 @@ export default function Home() {
             </div>
             <div className="flex items-center gap-2">
               <ThemeToggle />
-              {isPremiumUnlocked && (
-                <span className="rounded-full bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-3 py-1 text-xs font-medium">
-                  PRO
-                </span>
-              )}
+              {isPremiumUnlocked && (() => {
+                const trialDays = CacheUtils.getTrialDaysRemaining();
+                const inTrial = CacheUtils.isInTrialPeriod();
+                if (inTrial && trialDays > 0) {
+                  return (
+                    <span className="rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 px-3 py-1 text-xs font-medium">
+                      체험 D-{trialDays}
+                    </span>
+                  );
+                }
+                return (
+                  <span className="rounded-full bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-3 py-1 text-xs font-medium">
+                    PRO
+                  </span>
+                );
+              })()}
             </div>
           </div>
           <CategoryTab
@@ -437,7 +460,7 @@ export default function Home() {
 
       {/* Footer with donation */}
       <footer className="mx-auto max-w-lg px-4 pb-8 pt-4 space-y-3">
-        {DONATION_URL && (
+        {DONATION_URL && !CacheUtils.isInTrialPeriod() && (
           <a
             href={DONATION_URL}
             target="_blank"

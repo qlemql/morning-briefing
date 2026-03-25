@@ -4,6 +4,7 @@ import { useState, useEffect, startTransition } from 'react';
 import { APP_VERSION } from '@/lib/version';
 
 const CHANGELOG: Record<string, string> = {
+  '1.4.0': '7일 무료체험, 뉴스 원문 링크, 주말 특별 브리핑',
   '1.3.0': '다크 모드 지원, 시스템 설정 자동 감지',
   '1.2.0': '더 빠른 로딩, 공유 기능 개선, 당겨서 새로고침',
   '1.1.0': '풀-투-리프레시, 키보드 네비게이션, 웹 바이탈 모니터링',

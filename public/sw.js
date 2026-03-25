@@ -1,4 +1,4 @@
-const CACHE_NAME = 'morning-briefing-v5';
+const CACHE_NAME = 'morning-briefing-v6';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',

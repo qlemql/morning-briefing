@@ -32,7 +32,7 @@ const ECONOMY_SYSTEM_PROMPT = `당신은 한국 경제 및 시사 전문가입�
 - 추측/정치적 편향/개인 의견 금지
 
 다음 JSON만 출력. 마크다운이나 추가 설명 금지:
-{"cards":[{"id":"card_1","number":1,"title":"제목","content":"내용","summary":"요약","type":"오늘의핵심","source":"출처"},{"id":"card_2","number":2,"title":"제목","content":"내용","summary":"요약","type":"영향분석","source":"출처"},{"id":"card_3","number":3,"title":"제목","content":"내용","summary":"요약","type":"실전인사이트","source":"출처"}]}`;
+{"cards":[{"id":"card_1","number":1,"title":"제목","content":"내용","summary":"요약","type":"오늘의핵심","source":"언론사명","sourceUrl":"https://원문URL"},{"id":"card_2","number":2,"title":"제목","content":"내용","summary":"요약","type":"영향분석","source":"언론사명","sourceUrl":"https://원문URL"},{"id":"card_3","number":3,"title":"제목","content":"내용","summary":"요약","type":"실전인사이트","source":"언론사명","sourceUrl":"https://원문URL"}]}`;
 
 const INVESTMENT_SYSTEM_PROMPT = `당신은 한국 주식시장 및 글로벌 투자 전문가입니다. 매일 아침 주식시장 동향, 투자 기회, 관련 자산군 분석을 제공합니다.
 
@@ -56,7 +56,7 @@ const INVESTMENT_SYSTEM_PROMPT = `당신은 한국 주식시장 및 글로벌 �
 - 투자 권유 금지 ("~을 사세요" 금지), 근거 없는 예측 금지. 하지만 "주목할 만하다", "모니터링이 필요하다" 정도의 표현은 가능
 
 다음 JSON만 출력. 마크다운이나 추가 설명 금지:
-{"cards":[{"id":"card_1","number":1,"title":"제목","content":"내용","summary":"요약","type":"오늘의핵심","source":"출처"},{"id":"card_2","number":2,"title":"제목","content":"내용","summary":"요약","type":"영향분석","source":"출처"},{"id":"card_3","number":3,"title":"제목","content":"내용","summary":"요약","type":"실전인사이트","source":"출처"}]}`;
+{"cards":[{"id":"card_1","number":1,"title":"제목","content":"내용","summary":"요약","type":"오늘의핵심","source":"언론사명","sourceUrl":"https://원문URL"},{"id":"card_2","number":2,"title":"제목","content":"내용","summary":"요약","type":"영향분석","source":"언론사명","sourceUrl":"https://원문URL"},{"id":"card_3","number":3,"title":"제목","content":"내용","summary":"요약","type":"실전인사이트","source":"언론사명","sourceUrl":"https://원문URL"}]}`;
 
 const LIFESTYLE_SYSTEM_PROMPT = `당신은 생활 트렌드 및 테크 전문 에디터입니다. 매일 아침 사람들의 일상에 영향을 미치는 IT/테크, 소비, 건강, 문화 트렌드를 분석합니다.
 
@@ -80,7 +80,7 @@ const LIFESTYLE_SYSTEM_PROMPT = `당신은 생활 트렌드 및 테크 전문 �
 - 광고성 내용 금지, 중립적 시각 유지
 
 다음 JSON만 출력. 마크다운이나 추가 설명 금지:
-{"cards":[{"id":"card_1","number":1,"title":"제목","content":"내용","summary":"요약","type":"오늘의핵심","source":"출처"},{"id":"card_2","number":2,"title":"제목","content":"내용","summary":"요약","type":"영향분석","source":"출처"},{"id":"card_3","number":3,"title":"제목","content":"내용","summary":"요약","type":"실전인사이트","source":"출처"}]}`;
+{"cards":[{"id":"card_1","number":1,"title":"제목","content":"내용","summary":"요약","type":"오늘의핵심","source":"언론사명","sourceUrl":"https://원문URL"},{"id":"card_2","number":2,"title":"제목","content":"내용","summary":"요약","type":"영향분석","source":"언론사명","sourceUrl":"https://원문URL"},{"id":"card_3","number":3,"title":"제목","content":"내용","summary":"요약","type":"실전인사이트","source":"언론사명","sourceUrl":"https://원문URL"}]}`;
 
 const SYSTEM_PROMPTS: Record<string, string> = {
   economy: ECONOMY_SYSTEM_PROMPT,
@@ -182,20 +182,37 @@ export async function generateBriefing(
     ? '오전 출근 전에 읽는 브리핑입니다. 오늘 하루에 필요한 정보에 집중하세요.'
     : '오후에 읽는 브리핑입니다. 오늘 발생한 주요 뉴스를 정리해주세요.';
 
-  const userPrompt = `오늘은 ${date} (${dayOfWeek}요일, KST 기준)입니다. ${timeContext}
+  // Weekend/weekday format branching
+  const kstDayNum = kstNow.getUTCDay(); // 0=Sun, 6=Sat
+  const isWeekend = kstDayNum === 0 || kstDayNum === 6;
+  const weekendContext = isWeekend
+    ? `\n\n주말 특별 포맷: "이번 주 마켓 리캡 + 다음 주 주요 일정"으로 구성하세요. 다음 주 FOMC, 실적 발표, 고용지표 등 예정된 이벤트를 반드시 포함하세요.`
+    : '';
+
+  const userPrompt = `오늘은 ${date} (${dayOfWeek}요일, KST 기준)입니다. ${timeContext}${weekendContext}
 
 오늘의 ${categoryKorean} 카테고리 아침 브리핑 카드 3장을 작성해주세요.
 
+뉴스 선정 기준 (우선순위):
+1. 가장 많은 언론사가 다루고 있는 뉴스
+2. 시장에 직접 영향을 주는 뉴스
+3. 독자의 돈과 일상에 영향을 주는 뉴스
+
+카드별 톤 차별화:
+- 카드 1 (무료): 대중적이고 임팩트 있는 톤. "오늘 이거 하나만 알면 됩니다" 느낌
+- 카드 2-3 (유료): 프리미엄답게 분석적인 톤. 데이터와 맥락 중심
+
 핵심 규칙:
 - 반드시 웹 검색으로 오늘자(${date}) 또는 전날 저녁 최신 뉴스를 찾아주세요
-- 가장 영향력 있고 독자에게 실질적으로 유용한 뉴스를 선택하세요
 - title은 반드시 20자 이내 — 핵심 키워드 + 임팩트 (예: "반도체 훈풍, 삼성 주가 급등")
 - summary는 반드시 60자 이내 (카드 2-3은 "이거 알면 돈 아끼는데..." 같은 궁금증 유발 톤)
 - content는 4~6문장, 각 문장에 구체적 수치/사실 포함. 모호한 표현("많은", "크게" 등) 대신 수치 사용
 - source에는 실제 언론사명 기재 (예: "한국경제", "Bloomberg")
+- sourceUrl에는 반드시 웹 검색에서 찾은 실제 뉴스 기사 URL을 기재 (예: "https://www.hankyung.com/article/...")
 - 카드 3개의 주제가 서로 겹치지 않도록 다양하게 선택 (같은 기업/이슈 반복 금지)
 - 카드 1의 title은 독자가 멈추고 읽고 싶게 만들어야 함 — 첫인상이 곧 서비스 평가
 - content에서 "~에 따르면", "~라고 밝혔다" 등 인용문을 넣어 신뢰감을 높여주세요
+- 절대로 특정 종목/자산의 매수나 매도를 권유하지 마세요. "주목할 만하다", "모니터링이 필요하다" 수준의 표현만 가능
 - JSON만 출력하세요`;
 
   // Budget guard — prevent overspending
@@ -324,6 +341,7 @@ export async function generateBriefing(
       summary: clampedSummary || '요약을 불러오지 못했습니다',
       type: card.type || (types[index] as BriefingCard['type']),
       source: card.source,
+      sourceUrl: card.sourceUrl && card.sourceUrl.startsWith('http') ? card.sourceUrl : undefined,
     };
   });
 
