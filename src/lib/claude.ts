@@ -177,11 +177,13 @@ export async function generateBriefing(
   const userPrompt = `오늘은 ${date} (KST 기준)입니다. 오늘의 ${categoryKorean} 카테고리 아침 브리핑 카드 3장을 작성해주세요.
 
 중요:
-- 반드시 웹 검색으로 오늘자(${date}) 최신 뉴스를 찾아주세요
+- 반드시 웹 검색으로 오늘자(${date}) 또는 전날 저녁 최신 뉴스를 찾아주세요
+- 가장 영향력 있고 독자에게 실질적으로 유용한 뉴스를 선택하세요
 - title은 반드시 20자 이내 (예: "반도체 훈풍, 삼성 주가 급등")
-- summary는 반드시 60자 이내
+- summary는 반드시 60자 이내 (카드 2-3은 궁금증을 유발하는 톤으로)
 - content는 4~6문장, 각 문장에 구체적 수치/사실 포함
 - source에는 실제 언론사명 기재 (예: "한국경제", "Bloomberg")
+- 카드 3개의 주제가 서로 겹치지 않도록 다양하게 선택
 - JSON만 출력하세요`;
 
   // Budget guard — prevent overspending

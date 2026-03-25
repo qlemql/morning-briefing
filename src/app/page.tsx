@@ -16,6 +16,7 @@ import { getTodayLabel, CATEGORIES } from '@/constants';
 import { track } from '@/lib/track';
 import { hapticLight, hapticMedium } from '@/lib/haptic';
 import { reportWebVitals } from '@/lib/vitals';
+import { VERSION_LABEL } from '@/lib/version';
 
 const DONATION_URL = 'https://qr.kakaopay.com/Fa0mKvPtZ';
 const SWIPE_THRESHOLD = 60;
@@ -363,7 +364,7 @@ export default function Home() {
               문의
             </a>
             {' · '}
-            <span>v1.0</span>
+            <span>{VERSION_LABEL}</span>
           </p>
         </div>
       </footer>
