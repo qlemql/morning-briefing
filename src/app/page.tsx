@@ -15,6 +15,7 @@ import { CacheUtils } from '@/lib/cache';
 import { getTodayLabel, CATEGORIES } from '@/constants';
 import { track } from '@/lib/track';
 import { hapticLight, hapticMedium } from '@/lib/haptic';
+import { reportWebVitals } from '@/lib/vitals';
 
 const DONATION_URL = 'https://qr.kakaopay.com/Fa0mKvPtZ';
 const SWIPE_THRESHOLD = 60;
@@ -47,6 +48,7 @@ export default function Home() {
     // 3) 오래된 캐시 정리
     CacheUtils.cleanupOldCache();
     track('page_view', { category: 'economy' });
+    reportWebVitals();
 
     // Auto-refresh when tab becomes visible after midnight (new day)
     const handleVisibility = () => {

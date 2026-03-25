@@ -1,4 +1,4 @@
-const CACHE_NAME = 'morning-briefing-v2';
+const CACHE_NAME = 'morning-briefing-v3';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -33,18 +33,22 @@ self.addEventListener('fetch', (event) => {
   // Skip non-GET and cross-origin
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;
 
-  // API calls: network-first with short timeout
+  // API calls: network-first with 8s timeout, stale cache fallback
   if (url.pathname.startsWith('/api/')) {
+    // Skip caching for analytics/subscribe (write-only endpoints)
+    if (url.pathname.includes('/analytics') || url.pathname.includes('/subscribe')) return;
+
     event.respondWith(
-      fetch(request)
-        .then((response) => {
+      Promise.race([
+        fetch(request).then((response) => {
           if (response.ok) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           }
           return response;
-        })
-        .catch(() => caches.match(request))
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
+      ]).catch(() => caches.match(request))
     );
     return;
   }
