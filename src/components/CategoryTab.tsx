@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { CATEGORIES } from '@/constants';
+import { hapticLight } from '@/lib/haptic';
 
 interface CategoryTabProps {
   activeCategory: string;
@@ -43,7 +44,7 @@ export default function CategoryTab({
               key={cat.id}
               role="tab"
               data-category={cat.id}
-              onClick={() => onCategoryChange(cat.id)}
+              onClick={() => { hapticLight(); onCategoryChange(cat.id); }}
               aria-selected={isActive}
               aria-controls={`panel-${cat.id}`}
               className={`relative z-10 flex-1 px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors duration-200 ${

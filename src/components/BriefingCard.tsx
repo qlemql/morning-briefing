@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { BriefingCard as BriefingCardType } from '@/lib/types';
 import { CARD_TYPE_LABELS, getCategoryById } from '@/constants';
 import { track } from '@/lib/track';
+import { hapticLight } from '@/lib/haptic';
 
 interface BriefingCardProps {
   card: BriefingCardType;
@@ -28,8 +29,9 @@ const ChevronIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-async function shareCard(card: BriefingCardType): Promise<boolean> {
-  const text = `[아침 브리핑] ${card.title}\n\n${card.summary}\n\n매일 아침 AI가 정리하는 뉴스 👉 https://morning-briefing-mocha.vercel.app`;
+async function shareCard(card: BriefingCardType, categoryName?: string): Promise<boolean> {
+  const categoryTag = categoryName ? ` #${categoryName}` : '';
+  const text = `[아침 브리핑${categoryTag}] ${card.title}\n\n${card.summary}\n\n매일 아침 AI가 정리하는 뉴스 👉 https://morning-briefing-mocha.vercel.app`;
   if (typeof navigator !== 'undefined' && navigator.share) {
     try {
       await navigator.share({ title: '아침 브리핑', text, url: 'https://morning-briefing-mocha.vercel.app' });
@@ -59,17 +61,25 @@ export default memo(function BriefingCard({
   const contentRef = useRef<HTMLDivElement>(null);
   const [contentHeight, setContentHeight] = useState<number | undefined>(undefined);
 
+  const shouldBlur = isPaywalled && !isPremiumUnlocked;
+  const category = getCategoryById(categoryId);
+  const typeInfo = CARD_TYPE_LABELS[card.type] || { label: card.type, icon: '📌' };
+  const isHeroCard = card.number === 1;
+  const cardContentId = `card-content-${categoryId}-${card.id}`;
+
   const handleShare = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const shared = await shareCard(card);
+    const shared = await shareCard(card, category.name);
     if (shared) {
-      track('share');
+      hapticLight();
+      track('share', { card: card.id, category: categoryId });
       setShowCopied(true);
       setTimeout(() => setShowCopied(false), 2000);
     }
-  }, [card]);
+  }, [card, category.name, categoryId]);
 
   const toggleExpand = useCallback(() => {
+    hapticLight();
     setExpanded((prev) => !prev);
     track('card_toggle', { card: card.id, expanded: String(!expanded) });
   }, [card.id, expanded]);
@@ -80,12 +90,6 @@ export default memo(function BriefingCard({
       toggleExpand();
     }
   }, [toggleExpand]);
-
-  const shouldBlur = isPaywalled && !isPremiumUnlocked;
-  const category = getCategoryById(categoryId);
-  const typeInfo = CARD_TYPE_LABELS[card.type] || { label: card.type, icon: '📌' };
-  const isHeroCard = card.number === 1;
-  const cardContentId = `card-content-${categoryId}-${card.id}`;
 
   useEffect(() => {
     if (delay === 0) return;

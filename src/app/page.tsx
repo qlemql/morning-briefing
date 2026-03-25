@@ -256,6 +256,18 @@ export default function Home() {
             <p className="text-gray-400 text-sm">오늘의 브리핑을 준비하고 있어요</p>
           </div>
         ) : null}
+
+        {/* Freshness indicator */}
+        {briefing?.generatedAt && (
+          <p className="text-center text-xs text-gray-300 pt-2">
+            {(() => {
+              const gen = new Date(briefing.generatedAt);
+              const h = gen.getHours();
+              const m = gen.getMinutes();
+              return `${h < 10 ? '0' : ''}${h}:${m < 10 ? '0' : ''}${m} 생성`;
+            })()}
+          </p>
+        )}
       </main>
 
       {/* Footer with donation */}
