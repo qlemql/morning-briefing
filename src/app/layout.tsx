@@ -56,6 +56,29 @@ export default function RootLayout({
           crossOrigin="anonymous"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'WebApplication',
+              name: '아침 브리핑',
+              description: 'AI가 매일 아침 경제·투자 뉴스를 3장의 카드로 정리해드립니다.',
+              url: 'https://morning-briefing-mocha.vercel.app',
+              applicationCategory: 'NewsApplication',
+              operatingSystem: 'Web',
+              offers: {
+                '@type': 'Offer',
+                price: '0',
+                priceCurrency: 'KRW',
+              },
+              author: {
+                '@type': 'Organization',
+                name: '아침 브리핑',
+              },
+            }),
+          }}
+        />
       </head>
       <body className="min-h-full flex flex-col bg-gray-50">
         <ErrorBoundary>{children}</ErrorBoundary>
