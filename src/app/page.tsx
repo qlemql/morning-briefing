@@ -9,6 +9,7 @@ import NotificationPrompt from '@/components/NotificationPrompt';
 import EmailCollector from '@/components/EmailCollector';
 import InstallPrompt from '@/components/InstallPrompt';
 import PullToRefresh from '@/components/PullToRefresh';
+import WelcomeToast from '@/components/WelcomeToast';
 import { BriefingCategory } from '@/lib/types';
 import { CacheUtils } from '@/lib/cache';
 import { getTodayLabel, CATEGORIES } from '@/constants';
@@ -223,6 +224,9 @@ export default function Home() {
   return (
     <PullToRefresh onRefresh={handleRefresh}>
     <div className="min-h-screen bg-gray-50">
+      {/* Welcome toast for first-time visitors */}
+      <WelcomeToast />
+
       {/* Top loading bar */}
       {loading && (
         <div className="fixed top-0 left-0 right-0 z-50 h-0.5 bg-gray-200">
