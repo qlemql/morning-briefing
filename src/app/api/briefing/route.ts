@@ -161,7 +161,13 @@ export async function POST(
         },
         data: gatedBriefing,
       },
-      { status: 200 },
+      {
+        status: 200,
+        headers: {
+          // CDN cache: 30min for same request, stale-while-revalidate for 1hr
+          'Cache-Control': 'public, s-maxage=1800, stale-while-revalidate=3600',
+        },
+      },
     );
   } catch (error) {
     const { code, message, status } = handleError(error, 'POST /api/briefing');
