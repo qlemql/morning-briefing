@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { hapticMedium } from '@/lib/haptic';
 
 interface PaywallOverlayProps {
   onUnlock: () => void;
@@ -163,17 +164,62 @@ export default function PaywallOverlay({
   isVisible,
   ...rest
 }: PaywallOverlayProps) {
-  if (!isVisible) return null;
+  const [mounted, setMounted] = useState(false);
+  const [animateIn, setAnimateIn] = useState(false);
+  const backdropRef = useRef<HTMLDivElement>(null);
 
-  // key를 사용해 모달이 열릴 때마다 PaywallContent를 새로 마운트 (상태 리셋)
+  useEffect(() => {
+    if (isVisible) {
+      setMounted(true);
+      hapticMedium();
+      // Trigger entrance animation after mount
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setAnimateIn(true));
+      });
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden';
+    } else {
+      setAnimateIn(false);
+      const t = setTimeout(() => setMounted(false), 300);
+      document.body.style.overflow = '';
+      return () => clearTimeout(t);
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isVisible]);
+
+  // Close on backdrop click
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === backdropRef.current) rest.onClose();
+  };
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!isVisible) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') rest.onClose();
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [isVisible, rest]);
+
+  if (!mounted) return null;
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm"
+      ref={backdropRef}
+      onClick={handleBackdropClick}
+      className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center transition-all duration-300 ease-out ${
+        animateIn ? 'bg-black/40 backdrop-blur-sm' : 'bg-black/0'
+      }`}
       role="dialog"
       aria-modal="true"
       aria-label="프리미엄 콘텐츠 잠금 해제"
     >
-      <div className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl p-6 sm:mx-4 shadow-2xl">
+      <div className={`w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl p-6 sm:mx-4 shadow-2xl transition-all duration-300 ease-out ${
+        animateIn
+          ? 'translate-y-0 opacity-100 scale-100'
+          : 'translate-y-8 opacity-0 scale-[0.97]'
+      }`}>
         <PaywallContent key={String(isVisible)} {...rest} />
       </div>
     </div>

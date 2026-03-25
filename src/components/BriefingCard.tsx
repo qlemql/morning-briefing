@@ -5,6 +5,7 @@ import { BriefingCard as BriefingCardType } from '@/lib/types';
 import { CARD_TYPE_LABELS, getCategoryById } from '@/constants';
 import { track } from '@/lib/track';
 import { hapticLight } from '@/lib/haptic';
+import { showToast } from '@/components/Toast';
 
 interface BriefingCardProps {
   card: BriefingCardType;
@@ -42,6 +43,7 @@ async function shareCard(card: BriefingCardType, categoryName?: string): Promise
   }
   if (typeof navigator !== 'undefined' && navigator.clipboard) {
     await navigator.clipboard.writeText(text);
+    showToast('링크가 복사되었어요!', '✅');
     return true;
   }
   return false;

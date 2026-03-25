@@ -10,6 +10,7 @@ import EmailCollector from '@/components/EmailCollector';
 import InstallPrompt from '@/components/InstallPrompt';
 import PullToRefresh from '@/components/PullToRefresh';
 import WelcomeToast from '@/components/WelcomeToast';
+import ToastContainer, { showToast } from '@/components/Toast';
 import { BriefingCategory } from '@/lib/types';
 import { CacheUtils } from '@/lib/cache';
 import { getTodayLabel, CATEGORIES } from '@/constants';
@@ -231,6 +232,8 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50">
       {/* Welcome toast for first-time visitors */}
       <WelcomeToast />
+      {/* Global toast notifications */}
+      <ToastContainer />
 
       {/* Top loading bar */}
       {loading && (
@@ -364,6 +367,7 @@ export default function Home() {
               try { await navigator.share({ title: '아침 브리핑', text }); track('share_app'); } catch { /* cancelled */ }
             } else if (navigator.clipboard) {
               await navigator.clipboard.writeText(text);
+              showToast('링크가 복사되었어요!', '✅');
               track('share_app');
             }
           }}
