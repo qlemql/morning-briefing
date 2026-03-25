@@ -33,16 +33,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       results[category] = `FAIL: ${message}`;
       console.error(`[Cron] ${category} failed:`, error);
 
-      // Retry once on failure
-      try {
-        console.log(`[Cron] Retrying ${category}...`);
-        const briefing = await generateBriefing(category, today);
-        ServerCache.set(category, today, briefing);
-        results[category] = `OK (retry, ${briefing.cards.length} cards)`;
-      } catch (retryError: unknown) {
-        const retryMsg = retryError instanceof Error ? retryError.message : 'Unknown error';
-        results[category] = `FAIL (retry failed): ${retryMsg}`;
-        console.error(`[Cron] ${category} retry also failed:`, retryError);
+      // Don't retry if budget exceeded
+      if (message.includes('budget')) {
+        results[category] = `SKIP: budget exceeded`;
+        console.warn(`[Cron] ${category} skipped — budget exceeded`);
+      } else {
+        // Retry once on failure
+        try {
+          console.log(`[Cron] Retrying ${category}...`);
+          const briefing = await generateBriefing(category, today);
+          ServerCache.set(category, today, briefing);
+          results[category] = `OK (retry, ${briefing.cards.length} cards)`;
+        } catch (retryError: unknown) {
+          const retryMsg = retryError instanceof Error ? retryError.message : 'Unknown error';
+          results[category] = `FAIL (retry failed): ${retryMsg}`;
+          console.error(`[Cron] ${category} retry also failed:`, retryError);
+        }
       }
     }
   });
@@ -50,11 +56,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   await Promise.all(promises);
 
   const elapsed = Date.now() - startTime;
-  console.log(`[Cron] Daily briefing for ${today} (${elapsed}ms):`, results);
+  const failCount = Object.values(results).filter((r) => r.startsWith('FAIL')).length;
+  console.log(
+    `[Cron] Daily briefing for ${today} completed in ${(elapsed / 1000).toFixed(1)}s` +
+    ` | ${categories.length - failCount}/${categories.length} succeeded`,
+    results,
+  );
 
   return NextResponse.json({
     date: today,
     results,
+    elapsedMs: elapsed,
     timestamp: new Date().toISOString(),
   });
 }
