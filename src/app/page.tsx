@@ -63,6 +63,8 @@ export default function Home() {
   const [isPremiumUnlocked, setIsPremiumUnlocked] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
+  const [slowLoading, setSlowLoading] = useState(false);
+  const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 페이지 로드 시 localStorage + 서버에서 unlock 상태 복원
   useEffect(() => {
@@ -149,6 +151,9 @@ export default function Home() {
 
     setLoading(true);
     setError(null);
+    setSlowLoading(false);
+    // Show "still loading" after 6 seconds
+    slowTimerRef.current = setTimeout(() => setSlowLoading(true), 6000);
 
     try {
       const today = CacheUtils.getTodayDate();
@@ -207,6 +212,8 @@ export default function Home() {
       }
     } finally {
       setLoading(false);
+      setSlowLoading(false);
+      if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
     }
   }, [briefings]);
 
@@ -330,6 +337,11 @@ export default function Home() {
             <CardSkeleton isHero />
             <CardSkeleton delay={100} />
             <CardSkeleton delay={200} />
+            {slowLoading && (
+              <p className="text-center text-xs text-gray-400 pt-2 animate-fade-slide-up">
+                AI가 최신 뉴스를 검색하고 있어요... 잠시만 기다려주세요
+              </p>
+            )}
           </>
         ) : briefing ? (
           briefing.cards.map((card, index) => (
