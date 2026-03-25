@@ -346,7 +346,7 @@ export default function Home() {
       </main>
 
       {/* Footer with donation */}
-      <footer className="mx-auto max-w-lg px-4 pb-8 pt-4">
+      <footer className="mx-auto max-w-lg px-4 pb-8 pt-4 space-y-3">
         {DONATION_URL && (
           <a
             href={DONATION_URL}
@@ -357,6 +357,20 @@ export default function Home() {
             ☕ 마음에 드셨다면 커피 한 잔 사주세요
           </a>
         )}
+        <button
+          onClick={async () => {
+            const text = '아침 브리핑 — AI가 매일 아침 뉴스를 3장 카드로 정리해줘요!\nhttps://morning-briefing-mocha.vercel.app';
+            if (navigator.share) {
+              try { await navigator.share({ title: '아침 브리핑', text }); track('share_app'); } catch { /* cancelled */ }
+            } else if (navigator.clipboard) {
+              await navigator.clipboard.writeText(text);
+              track('share_app');
+            }
+          }}
+          className="block w-full text-center rounded-xl border border-gray-200 bg-white text-gray-600 py-3 text-sm font-medium hover:bg-gray-50 transition"
+        >
+          🔗 친구에게 공유하기
+        </button>
         <div className="text-center text-xs text-gray-300 mt-4 space-y-1">
           <p>© 2026 아침 브리핑 · AI가 매일 아침 정리하는 뉴스</p>
           <p>
