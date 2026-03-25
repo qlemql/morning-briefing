@@ -80,15 +80,15 @@ export default function NotificationPrompt() {
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-40 mx-auto max-w-lg animate-slide-up">
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 flex items-start gap-3">
-        <div className="flex-shrink-0 w-10 h-10 bg-sky-50 rounded-xl flex items-center justify-center text-lg">
+      <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 p-4 flex items-start gap-3">
+        <div className="flex-shrink-0 w-10 h-10 bg-sky-50 dark:bg-sky-900/30 rounded-xl flex items-center justify-center text-lg">
           🔔
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-900">
+          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
             매일 아침 브리핑 알림 받기
           </p>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
             매일 오전 7시, 오늘의 브리핑을 놓치지 마세요
           </p>
         </div>

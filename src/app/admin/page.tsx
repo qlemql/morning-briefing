@@ -128,9 +128,9 @@ export default function AdminPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
         <div className="w-full max-w-sm">
-          <h1 className="text-xl font-bold text-gray-900 text-center mb-6">관리자 대시보드</h1>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 text-center mb-6">관리자 대시보드</h1>
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               CRON_SECRET
             </label>
             <input
@@ -139,7 +139,7 @@ export default function AdminPage() {
               onChange={(e) => setSecret(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && fetchData(secret)}
               placeholder="시크릿 키 입력"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/20 mb-3"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/20 dark:focus:ring-gray-100/20 mb-3"
             />
             <button
               onClick={() => fetchData(secret)}
@@ -161,13 +161,13 @@ export default function AdminPage() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#111111] p-6">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">아침 브리핑 대시보드</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">아침 브리핑 대시보드</h1>
             {lastRefresh && (
-              <p className="text-xs text-gray-400 mt-1">마지막 업데이트: {lastRefresh} · 30초마다 자동 갱신</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">마지막 업데이트: {lastRefresh} · 30초마다 자동 갱신</p>
             )}
           </div>
           <div className="flex items-center gap-3">
@@ -180,7 +180,7 @@ export default function AdminPage() {
             )}
             <button
               onClick={() => fetchData(secret)}
-              className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-300 transition-colors"
             >
               새로고침
             </button>
@@ -188,11 +188,11 @@ export default function AdminPage() {
         </div>
 
         {/* Manual Cron Trigger */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+        <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="font-bold text-gray-900">브리핑 수동 생성</h2>
-              <p className="text-xs text-gray-500 mt-1">오늘자 브리핑을 즉시 생성합니다 (3 카테고리)</p>
+              <h2 className="font-bold text-gray-900 dark:text-gray-100">브리핑 수동 생성</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-1">오늘자 브리핑을 즉시 생성합니다 (3 카테고리)</p>
             </div>
             <button
               onClick={triggerCron}
@@ -224,14 +224,14 @@ export default function AdminPage() {
 
         {/* Budget Section */}
         {budget && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 mb-6">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-bold text-gray-900">API 예산</h2>
-              <span className="text-xs text-gray-500">
+              <h2 className="font-bold text-gray-900 dark:text-gray-100">API 예산</h2>
+              <span className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500">
                 오늘 {budget.calls}회 호출 · ~${(budget.estimatedCostCents / 100).toFixed(2)} / ${(budget.budgetCents / 100).toFixed(2)}
               </span>
             </div>
-            <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+            <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3 overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all ${
                   budgetPct > 80 ? 'bg-red-500' : budgetPct > 50 ? 'bg-amber-500' : 'bg-emerald-500'
@@ -239,7 +239,7 @@ export default function AdminPage() {
                 style={{ width: `${budgetPct}%` }}
               />
             </div>
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
               {budgetPct}% 사용 · 남은 호출 ~{Math.max(0, Math.floor((budget.budgetCents - budget.estimatedCostCents) / 3))}회
             </p>
           </div>
@@ -260,13 +260,13 @@ export default function AdminPage() {
 
         {/* Category Views */}
         {analytics?.today?.categoryViews && Object.keys(analytics.today.categoryViews).length > 0 && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
-            <h2 className="font-bold text-gray-900 mb-4">카테고리별 조회</h2>
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 mb-8">
+            <h2 className="font-bold text-gray-900 dark:text-gray-100 mb-4">카테고리별 조회</h2>
             <div className="grid grid-cols-3 gap-4">
               {Object.entries(analytics.today.categoryViews).map(([cat, count]) => (
                 <div key={cat} className="text-center">
-                  <div className="text-2xl font-bold text-gray-900">{count}</div>
-                  <div className="text-xs text-gray-500 mt-1">{CATEGORY_LABELS[cat] || cat}</div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{count}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-1">{CATEGORY_LABELS[cat] || cat}</div>
                 </div>
               ))}
             </div>
@@ -275,12 +275,12 @@ export default function AdminPage() {
 
         {/* History */}
         {analytics?.history && analytics.history.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
-            <h2 className="font-bold text-gray-900 mb-4">최근 7일</h2>
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 mb-8">
+            <h2 className="font-bold text-gray-900 dark:text-gray-100 mb-4">최근 7일</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-gray-500 border-b">
+                  <tr className="text-left text-gray-500 dark:text-gray-400 dark:text-gray-500 border-b">
                     <th className="pb-2 pr-4">날짜</th>
                     <th className="pb-2 pr-4">PV</th>
                     <th className="pb-2 pr-4">UV</th>
@@ -289,8 +289,8 @@ export default function AdminPage() {
                 </thead>
                 <tbody>
                   {analytics.history.map((day) => (
-                    <tr key={day.date} className="border-b border-gray-50">
-                      <td className="py-2 pr-4 text-gray-700">{day.date}</td>
+                    <tr key={day.date} className="border-b border-gray-50 dark:border-gray-800">
+                      <td className="py-2 pr-4 text-gray-700 dark:text-gray-300">{day.date}</td>
                       <td className="py-2 pr-4">{day.pageViews}</td>
                       <td className="py-2 pr-4">{day.uniqueVisitors}</td>
                       <td className="py-2">{day.shares}</td>
@@ -304,8 +304,8 @@ export default function AdminPage() {
 
         {/* Subscribers */}
         {subscribers && subscribers.emails.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
-            <h2 className="font-bold text-gray-900 mb-4">
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 mb-8">
+            <h2 className="font-bold text-gray-900 dark:text-gray-100 mb-4">
               구독자 ({subscribers.count}명)
             </h2>
             <div className="space-y-1">
@@ -320,16 +320,16 @@ export default function AdminPage() {
 
         {/* System Status */}
         {health && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
-            <h2 className="font-bold text-gray-900 mb-4">시스템 상태 ({health.responseMs}ms)</h2>
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 mb-8">
+            <h2 className="font-bold text-gray-900 dark:text-gray-100 mb-4">시스템 상태 ({health.responseMs}ms)</h2>
             <div className="space-y-2">
               {Object.entries(health.checks).map(([key, check]) => (
-                <div key={key} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                <div key={key} className="flex items-center justify-between py-2 border-b border-gray-50 dark:border-gray-800 last:border-0">
                   <div className="flex items-center gap-2">
                     <span className={`w-2 h-2 rounded-full ${check.ok ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                    <span className="text-sm font-medium text-gray-700 capitalize">{key.replace('_', ' ')}</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">{key.replace('_', ' ')}</span>
                   </div>
-                  <span className="text-xs text-gray-400">{check.detail}</span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500">{check.detail}</span>
                 </div>
               ))}
             </div>
@@ -337,19 +337,19 @@ export default function AdminPage() {
         )}
 
         {/* Quick Actions */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h2 className="font-bold text-gray-900 mb-4">바로가기</h2>
+        <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6">
+          <h2 className="font-bold text-gray-900 dark:text-gray-100 mb-4">바로가기</h2>
           <div className="flex flex-wrap gap-2">
-            <a href="/" target="_blank" rel="noreferrer" className="text-sm px-4 py-2 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors">
+            <a href="/" target="_blank" rel="noreferrer" className="text-sm px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
               🌐 사이트 보기
             </a>
-            <a href="https://github.com/qlemql/morning-briefing" target="_blank" rel="noreferrer" className="text-sm px-4 py-2 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors">
+            <a href="https://github.com/qlemql/morning-briefing" target="_blank" rel="noreferrer" className="text-sm px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
               📦 GitHub
             </a>
-            <a href="https://vercel.com/dashboard" target="_blank" rel="noreferrer" className="text-sm px-4 py-2 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors">
+            <a href="https://vercel.com/dashboard" target="_blank" rel="noreferrer" className="text-sm px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
               ▲ Vercel
             </a>
-            <a href="https://console.upstash.com" target="_blank" rel="noreferrer" className="text-sm px-4 py-2 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors">
+            <a href="https://console.upstash.com" target="_blank" rel="noreferrer" className="text-sm px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
               🗄️ Upstash
             </a>
           </div>
@@ -364,9 +364,9 @@ function KPICard({ label, value, icon }: { label: string; value: string | number
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
       <div className="flex items-center gap-2 mb-1">
         <span className="text-lg">{icon}</span>
-        <span className="text-xs text-gray-500">{label}</span>
+        <span className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500">{label}</span>
       </div>
-      <div className="text-xl font-bold text-gray-900">{value}</div>
+      <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{value}</div>
     </div>
   );
 }

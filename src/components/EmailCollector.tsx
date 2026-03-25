@@ -63,7 +63,7 @@ export default function EmailCollector() {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center p-4 pointer-events-none">
       <div className="w-full max-w-lg pointer-events-auto animate-slide-up">
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-r from-gray-900 to-gray-800 px-5 py-4">
             <div className="flex items-center justify-between">
@@ -86,8 +86,8 @@ export default function EmailCollector() {
             {submitted ? (
               <div className="text-center py-2">
                 <div className="text-2xl mb-2">🎉</div>
-                <p className="text-sm font-semibold text-gray-900">구독 완료!</p>
-                <p className="text-xs text-gray-500 mt-1">내일 아침부터 브리핑을 보내드릴게요</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">구독 완료!</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">내일 아침부터 브리핑을 보내드릴게요</p>
               </div>
             ) : (
               <>
@@ -98,7 +98,7 @@ export default function EmailCollector() {
                     onChange={(e) => { setEmail(e.target.value); setError(''); }}
                     onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                     placeholder="이메일 주소 입력"
-                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/20 focus:border-gray-400 transition-all"
+                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/20 dark:focus:ring-gray-100/20 focus:border-gray-400 dark:focus:border-gray-500 transition-all"
                     autoComplete="email"
                   />
                   <button
@@ -111,7 +111,7 @@ export default function EmailCollector() {
                 {error && (
                   <p className="text-xs text-red-500 mt-2 ml-1">{error}</p>
                 )}
-                <p className="text-xs text-gray-400 mt-3 ml-1">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-3 ml-1">
                   스팸 없이, 매일 아침 1통. 언제든 구독 취소 가능
                 </p>
               </>
