@@ -48,6 +48,8 @@ export default function AdminPage() {
   const [subscribers, setSubscribers] = useState<SubscriberData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [cronRunning, setCronRunning] = useState(false);
+  const [cronResult, setCronResult] = useState<string | null>(null);
 
   const fetchData = useCallback(async (secretKey: string) => {
     setLoading(true);
@@ -76,6 +78,31 @@ export default function AdminPage() {
       setLoading(false);
     }
   }, []);
+
+  const triggerCron = useCallback(async () => {
+    setCronRunning(true);
+    setCronResult(null);
+    try {
+      const res = await fetch('/api/cron', {
+        headers: { Authorization: `Bearer ${secret}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const results = Object.entries(data.results || {})
+          .map(([k, v]) => `${CATEGORY_LABELS[k] || k}: ${v}`)
+          .join(', ');
+        setCronResult(`성공 (${(data.elapsedMs / 1000).toFixed(1)}s) — ${results}`);
+        // Refresh dashboard data after cron
+        setTimeout(() => fetchData(secret), 2000);
+      } else {
+        setCronResult(`실패: ${data.error || res.statusText}`);
+      }
+    } catch {
+      setCronResult('네트워크 오류');
+    } finally {
+      setCronRunning(false);
+    }
+  }, [secret, fetchData]);
 
   useEffect(() => {
     if (!authenticated || !secret) return;
@@ -130,6 +157,28 @@ export default function AdminPage() {
           >
             새로고침
           </button>
+        </div>
+
+        {/* Manual Cron Trigger */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-bold text-gray-900">브리핑 수동 생성</h2>
+              <p className="text-xs text-gray-500 mt-1">오늘자 브리핑을 즉시 생성합니다 (3 카테고리)</p>
+            </div>
+            <button
+              onClick={triggerCron}
+              disabled={cronRunning}
+              className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-gray-800 active:scale-95 transition-all disabled:opacity-50"
+            >
+              {cronRunning ? '생성 중...' : '지금 생성'}
+            </button>
+          </div>
+          {cronResult && (
+            <p className={`text-xs mt-3 ${cronResult.startsWith('성공') ? 'text-emerald-600' : 'text-red-500'}`}>
+              {cronResult}
+            </p>
+          )}
         </div>
 
         {/* Budget Section */}

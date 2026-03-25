@@ -274,10 +274,11 @@ export async function generateBriefing(
     throw new Error('Invalid or empty response structure from Claude');
   }
 
+  const types = ['오늘의핵심', '영향분석', '실전인사이트'] as const;
+
   // 카드가 3개 미만이면 빈 카드로 채우기
   while (parsed.cards.length < 3) {
     const idx = parsed.cards.length;
-    const types = ['오늘의핵심', '영향분석', '실전인사이트'] as const;
     parsed.cards.push({
       id: `card_${idx + 1}`,
       number: (idx + 1) as 1 | 2 | 3,
@@ -288,7 +289,6 @@ export async function generateBriefing(
     });
   }
 
-  const types = ['오늘의핵심', '영향분석', '실전인사이트'] as const;
   const validatedCards = parsed.cards.slice(0, 3).map((card, index) => {
     const title = (card.title || '').trim();
     const content = (card.content || '').trim();
