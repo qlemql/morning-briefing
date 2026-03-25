@@ -425,6 +425,10 @@ export default function Home() {
               문의
             </a>
             {' · '}
+            <a href="/privacy" className="hover:text-gray-500 transition-colors">
+              개인정보처리방침
+            </a>
+            {' · '}
             <span>{VERSION_LABEL}</span>
           </p>
         </div>
