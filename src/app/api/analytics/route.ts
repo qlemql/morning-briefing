@@ -12,14 +12,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const { event, category } = body;
 
     // Simple visitor ID from IP + user-agent hash
-    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const ip =
+      request.headers.get('x-forwarded-for') ||
+      request.headers.get('x-real-ip') ||
+      'unknown';
     const ua = request.headers.get('user-agent') || '';
-    const visitorId = createHash('sha256').update(`${ip.split(',')[0].trim()}_${ua}`).digest('hex').substring(0, 12);
+    const visitorId = createHash('sha256')
+      .update(`${ip.split(',')[0].trim()}_${ua}`)
+      .digest('hex')
+      .substring(0, 12);
 
     if (event === 'page_view') {
-      trackPageView(visitorId, category);
+      await trackPageView(visitorId, category);
     } else if (['share', 'paywall_click', 'unlock'].includes(event)) {
-      trackEvent(event);
+      await trackEvent(event);
     }
 
     return NextResponse.json({ ok: true }, { status: 200 });
@@ -38,7 +44,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   const date = request.nextUrl.searchParams.get('date') || undefined;
-  const data = date ? getStats(date) : { today: getStats(), history: getAllStats() };
+  const data = date
+    ? await getStats(date)
+    : { today: await getStats(), history: await getAllStats() };
 
   return NextResponse.json({ data }, { status: 200 });
 }

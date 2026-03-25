@@ -1,77 +1,101 @@
 /**
- * Lightweight server-side analytics (in-memory for MVP).
- * Tracks: page views, unique visitors (daily), shares, paywall clicks, unlocks.
- * Data resets on cold start — sufficient for early-stage KPI monitoring.
+ * Analytics module — persists to Upstash Redis via kv.ts.
  *
- * For production: replace with Vercel Analytics or a simple DB.
+ * Key schema (prefix: "mb:"):
+ *   mb:pv:{date}              → INCR  page views
+ *   mb:uv:{date}              → SADD  unique visitor hashes
+ *   mb:shares:{date}          → INCR
+ *   mb:paywall:{date}         → INCR
+ *   mb:unlocks:{date}         → INCR
+ *   mb:cat:{date}             → HASH  { category: count }
+ *
+ * All keys get 30-day TTL for automatic cleanup.
  */
 
-interface DailyStats {
-  date: string;
-  pageViews: number;
-  uniqueVisitors: Set<string>;
-  shares: number;
-  paywallClicks: number;
-  unlocks: number;
-  categoryViews: Record<string, number>;
-}
+import {
+  kvIncr,
+  kvSadd,
+  kvScard,
+  kvHincrby,
+  kvHgetall,
+  kvExpire,
+  kvGet,
+} from './kv';
 
-const stats = new Map<string, DailyStats>();
+const TTL = 30 * 86400; // 30 days
 
 function getToday(): string {
   return new Date(Date.now() + 9 * 3600 * 1000).toISOString().split('T')[0];
 }
 
-function getOrCreateDay(date: string): DailyStats {
-  if (!stats.has(date)) {
-    stats.set(date, {
-      date,
-      pageViews: 0,
-      uniqueVisitors: new Set(),
-      shares: 0,
-      paywallClicks: 0,
-      unlocks: 0,
-      categoryViews: {},
-    });
+export async function trackPageView(visitorId: string, category?: string): Promise<void> {
+  const date = getToday();
+  const pvKey = `mb:pv:${date}`;
+  const uvKey = `mb:uv:${date}`;
+
+  await Promise.all([
+    kvIncr(pvKey).then(() => kvExpire(pvKey, TTL)),
+    kvSadd(uvKey, visitorId).then(() => kvExpire(uvKey, TTL)),
+    category
+      ? kvHincrby(`mb:cat:${date}`, category, 1).then(() =>
+          kvExpire(`mb:cat:${date}`, TTL),
+        )
+      : Promise.resolve(),
+  ]);
+}
+
+export async function trackEvent(
+  event: 'share' | 'paywall_click' | 'unlock',
+): Promise<void> {
+  const date = getToday();
+  const keyMap = {
+    share: `mb:shares:${date}`,
+    paywall_click: `mb:paywall:${date}`,
+    unlock: `mb:unlocks:${date}`,
+  };
+  const key = keyMap[event];
+  await kvIncr(key);
+  await kvExpire(key, TTL);
+}
+
+export async function getStats(
+  date?: string,
+): Promise<Record<string, unknown>> {
+  const d = date || getToday();
+
+  const [pv, uv, shares, paywall, unlocks, catRaw] = await Promise.all([
+    kvGet(`mb:pv:${d}`).then((v) => parseInt(v || '0', 10)),
+    kvScard(`mb:uv:${d}`),
+    kvGet(`mb:shares:${d}`).then((v) => parseInt(v || '0', 10)),
+    kvGet(`mb:paywall:${d}`).then((v) => parseInt(v || '0', 10)),
+    kvGet(`mb:unlocks:${d}`).then((v) => parseInt(v || '0', 10)),
+    kvHgetall(`mb:cat:${d}`),
+  ]);
+
+  const categoryViews: Record<string, number> = {};
+  for (const [k, v] of Object.entries(catRaw)) {
+    categoryViews[k] = parseInt(v, 10);
   }
-  return stats.get(date)!;
-}
 
-export function trackPageView(visitorId: string, category?: string): void {
-  const day = getOrCreateDay(getToday());
-  day.pageViews++;
-  day.uniqueVisitors.add(visitorId);
-  if (category) {
-    day.categoryViews[category] = (day.categoryViews[category] || 0) + 1;
-  }
-}
-
-export function trackEvent(event: 'share' | 'paywall_click' | 'unlock'): void {
-  const day = getOrCreateDay(getToday());
-  if (event === 'share') day.shares++;
-  else if (event === 'paywall_click') day.paywallClicks++;
-  else if (event === 'unlock') day.unlocks++;
-}
-
-export function getStats(date?: string): Record<string, unknown> {
-  const targetDate = date || getToday();
-  const day = stats.get(targetDate);
-  if (!day) return { date: targetDate, pageViews: 0, uniqueVisitors: 0, shares: 0, paywallClicks: 0, unlocks: 0, categoryViews: {} };
   return {
-    date: day.date,
-    pageViews: day.pageViews,
-    uniqueVisitors: day.uniqueVisitors.size,
-    shares: day.shares,
-    paywallClicks: day.paywallClicks,
-    unlocks: day.unlocks,
-    categoryViews: day.categoryViews,
-    conversionRate: day.paywallClicks > 0 ? ((day.unlocks / day.paywallClicks) * 100).toFixed(1) + '%' : '0%',
+    date: d,
+    pageViews: pv,
+    uniqueVisitors: uv,
+    shares,
+    paywallClicks: paywall,
+    unlocks,
+    categoryViews,
+    conversionRate:
+      paywall > 0 ? ((unlocks / paywall) * 100).toFixed(1) + '%' : '0%',
   };
 }
 
-export function getAllStats(): Record<string, unknown>[] {
-  return Array.from(stats.keys())
-    .sort()
-    .slice(-7)
-    .map((date) => getStats(date));
+export async function getAllStats(): Promise<Record<string, unknown>[]> {
+  // Last 7 days
+  const days: string[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(Date.now() + 9 * 3600 * 1000 - i * 86400 * 1000);
+    days.push(d.toISOString().split('T')[0]);
+  }
+  return Promise.all(days.map((d) => getStats(d)));
 }
