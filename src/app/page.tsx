@@ -18,7 +18,14 @@ const DONATION_URL = 'https://qr.kakaopay.com/Fa0mKvPtZ';
 const SWIPE_THRESHOLD = 60;
 
 export default function Home() {
-  const [activeCategory, setActiveCategory] = useState('economy');
+  const [activeCategory, setActiveCategory] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const cat = params.get('category');
+      if (cat && ['economy', 'investment', 'lifestyle'].includes(cat)) return cat;
+    }
+    return 'economy';
+  });
   const [briefings, setBriefings] = useState<Record<string, BriefingCategory>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<{ message: string; type: string } | null>(null);

@@ -4,11 +4,14 @@
   "description": "AI가 매일 아침 정리해주는 경제·투자·생활 뉴스 브리핑",
   "categories": ["news", "business", "lifestyle"],
   "lang": "ko",
-  "start_url": "/",
+  "start_url": "/?utm_source=pwa",
+  "scope": "/",
+  "id": "/",
   "display": "standalone",
   "background_color": "#f5f5f7",
   "theme_color": "#1d1d1f",
   "orientation": "portrait",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icon-192.png",
@@ -21,6 +24,26 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "경제/시사 브리핑",
+      "short_name": "경제",
+      "url": "/?category=economy&utm_source=pwa_shortcut",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "투자 브리핑",
+      "short_name": "투자",
+      "url": "/?category=investment&utm_source=pwa_shortcut",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "생활/테크 브리핑",
+      "short_name": "생활",
+      "url": "/?category=lifestyle&utm_source=pwa_shortcut",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }
