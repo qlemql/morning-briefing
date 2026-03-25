@@ -39,6 +39,8 @@ export const metadata: Metadata = {
     'apple-mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-status-bar-style': 'default',
     'apple-mobile-web-app-title': '아침 브리핑',
+    // Naver Search Advisor — CEO가 등록 후 인증 코드 입력
+    // 'naver-site-verification': 'YOUR_CODE_HERE',
   },
 };
 
