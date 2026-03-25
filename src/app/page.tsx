@@ -101,7 +101,7 @@ export default function Home() {
           setError({ message: 'API 키를 확인해주세요.', type: 'auth' });
         } else if (code === 'RATE_LIMITED') {
           setError({ message: '잠시 후 다시 시도해주세요.', type: 'rate' });
-        } else if (data.error?.message?.includes('budget')) {
+        } else if (code === 'BUDGET_EXCEEDED' || data.error?.message?.includes('budget')) {
           setError({ message: '오늘의 브리핑 생성 한도에 도달했어요. 내일 다시 확인해주세요!', type: 'budget' });
         } else {
           setError({ message: '브리핑을 불러올 수 없습니다.', type: 'general' });

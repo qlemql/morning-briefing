@@ -76,6 +76,15 @@ function handleError(
     }
   }
 
+  // Budget exceeded
+  if (error instanceof Error && error.message.includes('budget')) {
+    return {
+      code: 'BUDGET_EXCEEDED',
+      message: 'Daily API budget exceeded',
+      status: 429,
+    };
+  }
+
   // Network error
   if (error instanceof TypeError && error.message.includes('fetch')) {
     return {
