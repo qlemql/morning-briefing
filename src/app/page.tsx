@@ -6,6 +6,7 @@ import BriefingCard from '@/components/BriefingCard';
 import CardSkeleton from '@/components/CardSkeleton';
 import PullToRefresh from '@/components/PullToRefresh';
 import StreakBadge from '@/components/StreakBadge';
+import ThemeToggle from '@/components/ThemeToggle';
 import ToastContainer, { showToast } from '@/components/Toast';
 
 // Lazy-load non-critical overlays (not needed for initial render)
@@ -263,7 +264,7 @@ export default function Home() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#111111] transition-colors">
       {/* Global toast notifications */}
       <ToastContainer />
       {/* Lazy-loaded non-critical UI */}
@@ -274,27 +275,30 @@ export default function Home() {
 
       {/* Top loading bar */}
       {loading && (
-        <div className="fixed top-0 left-0 right-0 z-50 h-0.5 bg-gray-200">
-          <div className="h-full bg-gray-900 loading-bar" />
+        <div className="fixed top-0 left-0 right-0 z-50 h-0.5 bg-gray-200 dark:bg-gray-800">
+          <div className="h-full bg-gray-900 dark:bg-gray-100 loading-bar" />
         </div>
       )}
 
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-100">
+      <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800">
         <div className="mx-auto max-w-lg px-4 pt-5 pb-4">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">아침 브리핑</h1>
-              <p className="text-sm text-gray-400 mt-0.5 flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">아침 브리핑</h1>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-2">
                 <span>{getTodayLabel()} · {new Date().getHours() < 12 ? '좋은 아침이에요' : new Date().getHours() < 18 ? '좋은 오후예요' : '좋은 저녁이에요'}</span>
                 <StreakBadge />
               </p>
             </div>
-            {isPremiumUnlocked && (
-              <span className="rounded-full bg-gray-900 text-white px-3 py-1 text-xs font-medium">
-                PRO
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              {isPremiumUnlocked && (
+                <span className="rounded-full bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-3 py-1 text-xs font-medium">
+                  PRO
+                </span>
+              )}
+            </div>
           </div>
           <CategoryTab
             activeCategory={activeCategory}
@@ -308,8 +312,8 @@ export default function Home() {
         <div className={`mx-auto max-w-lg px-4 pt-4`}>
           <div className={`rounded-xl p-3 text-sm flex items-center gap-2 ${
             error.type === 'stale' || error.type === 'budget'
-              ? 'bg-amber-50 text-amber-700'
-              : 'bg-red-50 text-red-700'
+              ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+              : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400'
           }`}>
             <span>{error.type === 'stale' ? '📅' : error.type === 'budget' ? '📊' : '⚠️'}</span>
             <span>{error.message}</span>
@@ -370,7 +374,7 @@ export default function Home() {
         ) : !error ? (
           <div className="text-center py-16">
             <div className="text-3xl mb-3">☕</div>
-            <p className="text-gray-400 text-sm">오늘의 브리핑을 준비하고 있어요</p>
+            <p className="text-gray-400 dark:text-gray-500 text-sm">오늘의 브리핑을 준비하고 있어요</p>
             {typeof navigator !== 'undefined' && 'connection' in navigator &&
               (navigator as unknown as { connection: { effectiveType: string } }).connection?.effectiveType === 'slow-2g' && (
               <p className="text-gray-300 text-xs mt-2">느린 네트워크가 감지되었어요. 잠시만 기다려주세요.</p>
@@ -380,7 +384,7 @@ export default function Home() {
 
         {/* Freshness indicator */}
         {briefing?.generatedAt && (
-          <p className="text-center text-xs text-gray-300 pt-2">
+          <p className="text-center text-xs text-gray-300 dark:text-gray-600 pt-2">
             {(() => {
               const gen = new Date(briefing.generatedAt);
               const h = gen.getHours();
@@ -398,7 +402,7 @@ export default function Home() {
             href={DONATION_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="block w-full text-center rounded-xl border border-gray-200 bg-white text-gray-600 py-3 text-sm font-medium hover:bg-gray-50 transition"
+            className="block w-full text-center rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1c1c1e] text-gray-600 dark:text-gray-300 py-3 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition"
           >
             ☕ 마음에 드셨다면 커피 한 잔 사주세요
           </a>
@@ -414,11 +418,11 @@ export default function Home() {
               track('share_app');
             }
           }}
-          className="block w-full text-center rounded-xl border border-gray-200 bg-white text-gray-600 py-3 text-sm font-medium hover:bg-gray-50 transition"
+          className="block w-full text-center rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1c1c1e] text-gray-600 dark:text-gray-300 py-3 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition"
         >
           🔗 친구에게 공유하기
         </button>
-        <div className="text-center text-xs text-gray-300 mt-4 space-y-1">
+        <div className="text-center text-xs text-gray-300 dark:text-gray-600 mt-4 space-y-1">
           <p>© 2026 아침 브리핑 · AI가 매일 아침 정리하는 뉴스</p>
           <p>
             <a href="mailto:thbabu2@gmail.com" className="hover:text-gray-500 transition-colors">

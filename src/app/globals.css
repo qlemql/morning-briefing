@@ -1,12 +1,29 @@
 @import "tailwindcss";
 
+/* Dark mode variant using class strategy */
+@variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #f5f5f7;
   --foreground: #1d1d1f;
   --card-bg: #ffffff;
+  --card-border: #f3f4f6;
+  --muted: #9ca3af;
+  --muted-light: #d1d5db;
+  --surface: #f3f4f6;
   --accent-economy: #0ea5e9;
   --accent-investment: #f59e0b;
   --accent-lifestyle: #8b5cf6;
+}
+
+.dark {
+  --background: #111111;
+  --foreground: #e5e5e5;
+  --card-bg: #1c1c1e;
+  --card-border: #2c2c2e;
+  --muted: #8e8e93;
+  --muted-light: #48484a;
+  --surface: #1c1c1e;
 }
 
 @theme inline {
@@ -59,6 +76,11 @@ html {
   background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.dark .skeleton-shimmer {
+  background: linear-gradient(90deg, #2c2c2e 25%, #3a3a3c 50%, #2c2c2e 75%);
+  background-size: 200% 100%;
 }
 
 /* Smooth entrance */
@@ -127,7 +149,15 @@ html {
 
 /* Smooth focus outline for accessibility */
 :focus-visible {
-  outline: 2px solid #1d1d1f;
+  outline: 2px solid var(--foreground);
   outline-offset: 2px;
   border-radius: 8px;
+}
+
+/* Dark mode transition for smooth theme switching */
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease !important;
 }

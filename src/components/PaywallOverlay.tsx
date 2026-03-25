@@ -71,28 +71,28 @@ function PaywallContent({
   return (
     <>
       {/* Handle bar (mobile) */}
-      <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-5 sm:hidden" />
+      <div className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-5 sm:hidden" />
 
       {step === 'intro' && (
         <>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
             전체 브리핑이 궁금하신가요?
           </h2>
-          <p className="text-gray-500 text-sm mb-5">
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-5">
             커피 한 잔 가격으로 깊이 있는 분석을 받아보세요.
             응원해주시면 더 좋은 콘텐츠를 만들 수 있습니다.
           </p>
 
-          <div className="bg-gray-50 rounded-xl p-4 mb-5 space-y-2.5">
-            <div className="flex items-center gap-3 text-sm text-gray-700">
+          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 mb-5 space-y-2.5">
+            <div className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
               <span className="text-green-500">✓</span>
               <span><strong>영향분석</strong> — 뉴스가 내 삶에 미치는 영향</span>
             </div>
-            <div className="flex items-center gap-3 text-sm text-gray-700">
+            <div className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
               <span className="text-green-500">✓</span>
               <span><strong>실전인사이트</strong> — 바로 쓸 수 있는 전략</span>
             </div>
-            <div className="flex items-center gap-3 text-sm text-gray-700">
+            <div className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
               <span className="text-green-500">✓</span>
               <span>경제·투자·생활 <strong>전체 카테고리</strong></span>
             </div>
@@ -107,7 +107,7 @@ function PaywallContent({
 
           <button
             onClick={onClose}
-            className="w-full text-center text-sm text-gray-400 py-2 hover:text-gray-600 transition"
+            className="w-full text-center text-sm text-gray-400 dark:text-gray-500 py-2 hover:text-gray-600 dark:hover:text-gray-300 transition"
           >
             다음에 할게요
           </button>
@@ -117,8 +117,8 @@ function PaywallContent({
       {step === 'waiting' && (
         <div className="text-center py-4">
           <div className="text-4xl mb-4">☕</div>
-          <h2 className="text-lg font-bold text-gray-900 mb-2">감사합니다!</h2>
-          <p className="text-gray-500 text-sm mb-6">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">감사합니다!</h2>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
             응원해주셔서 감사합니다.<br />
             잠시 후 전체 브리핑이 열립니다.
           </p>
@@ -132,7 +132,7 @@ function PaywallContent({
                 className="transition-all duration-1000 ease-linear"
               />
             </svg>
-            <span className="absolute inset-0 flex items-center justify-center text-xl font-bold text-gray-700">
+            <span className="absolute inset-0 flex items-center justify-center text-xl font-bold text-gray-700 dark:text-gray-300">
               {countdown}
             </span>
           </div>
@@ -142,15 +142,15 @@ function PaywallContent({
       {step === 'unlocked' && (
         <div className="text-center py-4">
           <div className="text-4xl mb-4">🎉</div>
-          <h2 className="text-lg font-bold text-gray-900 mb-2">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
             전체 브리핑이 열렸습니다!
           </h2>
-          <p className="text-gray-500 text-sm mb-6">
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
             오늘 하루 모든 카드를 자유롭게 읽으세요.
           </p>
           <button
             onClick={onUnlock}
-            className="w-full rounded-xl bg-gray-900 text-white py-3.5 font-semibold text-base hover:bg-gray-800 transition"
+            className="w-full rounded-xl bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 py-3.5 font-semibold text-base hover:bg-gray-800 dark:hover:bg-gray-200 transition"
           >
             브리핑 보러가기
           </button>
@@ -215,7 +215,7 @@ export default function PaywallOverlay({
       aria-modal="true"
       aria-label="프리미엄 콘텐츠 잠금 해제"
     >
-      <div className={`w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl p-6 sm:mx-4 shadow-2xl transition-all duration-300 ease-out ${
+      <div className={`w-full sm:max-w-md bg-white dark:bg-[#1c1c1e] rounded-t-3xl sm:rounded-2xl p-6 sm:mx-4 shadow-2xl transition-all duration-300 ease-out ${
         animateIn
           ? 'translate-y-0 opacity-100 scale-100'
           : 'translate-y-8 opacity-0 scale-[0.97]'

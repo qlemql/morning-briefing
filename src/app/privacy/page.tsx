@@ -7,16 +7,16 @@ export const metadata = {
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-12">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#111111] px-4 py-12">
       <div className="max-w-2xl mx-auto">
         <Link
           href="/"
-          className="text-sm text-gray-400 hover:text-gray-600 mb-8 inline-block transition-colors"
+          className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 mb-8 inline-block transition-colors"
         >
           ← 홈으로
         </Link>
 
-        <h1 className="text-2xl font-bold text-gray-900 mb-8">개인정보처리방침</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-8">개인정보처리방침</h1>
 
         <div className="space-y-6 text-sm text-gray-700 leading-relaxed">
           <section>

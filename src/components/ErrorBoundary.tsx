@@ -41,13 +41,13 @@ export default class ErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) return this.props.fallback;
 
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#111111] p-6">
           <div className="text-center max-w-sm">
             <div className="text-4xl mb-4">⚠️</div>
-            <h2 className="text-lg font-bold text-gray-900 mb-2">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
               문제가 발생했습니다
             </h2>
-            <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
               일시적인 오류입니다. 페이지를 새로고침 해주세요.
             </p>
             <button

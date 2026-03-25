@@ -19,13 +19,13 @@ export default function CardSkeleton({ isHero = false, delay = 0 }: { isHero?: b
   }
 
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5" style={style}>
+    <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#1c1c1e] shadow-sm p-5" style={style}>
       <div className="flex items-start gap-4">
-        <div className="w-11 h-11 rounded-xl bg-gray-100 skeleton-shimmer flex-shrink-0" />
+        <div className="w-11 h-11 rounded-xl bg-gray-100 dark:bg-gray-800 skeleton-shimmer flex-shrink-0" />
         <div className="flex-1">
-          <div className="h-3 w-20 rounded bg-gray-100 skeleton-shimmer mb-2" />
-          <div className="h-5 w-3/4 rounded bg-gray-100 skeleton-shimmer mb-2" />
-          <div className="h-3 w-full rounded bg-gray-50 skeleton-shimmer" />
+          <div className="h-3 w-20 rounded bg-gray-100 dark:bg-gray-800 skeleton-shimmer mb-2" />
+          <div className="h-5 w-3/4 rounded bg-gray-100 dark:bg-gray-800 skeleton-shimmer mb-2" />
+          <div className="h-3 w-full rounded bg-gray-50 dark:bg-gray-700 skeleton-shimmer" />
         </div>
       </div>
     </div>

@@ -55,7 +55,7 @@ export default function StreakBadge() {
 
   return (
     <span
-      className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 text-xs font-semibold px-2 py-0.5 rounded-full animate-fade-slide-up"
+      className="inline-flex items-center gap-1 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-semibold px-2 py-0.5 rounded-full animate-fade-slide-up"
       title={`${streak}일 연속 방문 중!`}
     >
       🔥 {streak}일째

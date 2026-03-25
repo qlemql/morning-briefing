@@ -198,13 +198,13 @@ export default memo(function BriefingCard({
   // Cards 2-3 — clean white with accent border
   return (
     <article
-      className={`relative rounded-2xl bg-white overflow-hidden shadow-sm transition-all duration-400 ease-out ${
+      className={`relative rounded-2xl bg-white dark:bg-[#1c1c1e] overflow-hidden shadow-sm transition-all duration-400 ease-out ${
         entered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
-      } ${shouldBlur ? '' : 'border border-gray-100'}`}
+      } ${shouldBlur ? '' : 'border border-gray-100 dark:border-gray-800'}`}
       aria-label={`${typeInfo.label}: ${card.title}`}
     >
       <div
-        className={`p-5 ${!shouldBlur ? 'cursor-pointer active:bg-gray-50/50 transition-colors' : ''}`}
+        className={`p-5 ${!shouldBlur ? 'cursor-pointer active:bg-gray-50/50 dark:active:bg-gray-800/50 transition-colors' : ''}`}
         onClick={() => !shouldBlur && toggleExpand()}
         onKeyDown={!shouldBlur ? handleKeyDown : undefined}
         role={!shouldBlur ? 'button' : undefined}
@@ -230,10 +230,10 @@ export default memo(function BriefingCard({
             </div>
 
             {/* Title */}
-            <h3 className="text-base font-bold text-gray-900 leading-snug">{card.title}</h3>
+            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 leading-snug">{card.title}</h3>
 
             {/* Summary */}
-            <p className="mt-1 text-sm text-gray-500 leading-relaxed">{card.summary}</p>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{card.summary}</p>
           </div>
 
           {/* Expand indicator */}
@@ -253,17 +253,17 @@ export default memo(function BriefingCard({
           aria-hidden={!expanded}
         >
           <div ref={contentRef} className="px-5 pb-5">
-            <div className="border-t border-gray-50 pt-4">
-              <div className="text-[15px] text-gray-700 leading-relaxed whitespace-pre-line">
+            <div className="border-t border-gray-50 dark:border-gray-800 pt-4">
+              <div className="text-[15px] text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
                 {card.content}
               </div>
               <div className="mt-3 flex items-center justify-between">
                 {card.source && (
-                  <p className="text-xs text-gray-400">출처: {card.source}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">출처: {card.source}</p>
                 )}
                 <button
                   onClick={handleShare}
-                  className="text-xs text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1"
+                  className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex items-center gap-1"
                   aria-label={`${card.title} 공유하기`}
                 >
                   {showCopied ? (
@@ -291,18 +291,18 @@ export default memo(function BriefingCard({
               <div className="h-3 w-5/6 bg-gray-200 rounded mb-2" />
               <div className="h-3 w-4/6 bg-gray-200 rounded" />
             </div>
-            <div className="absolute inset-0 bg-gradient-to-b from-white/0 to-white" />
+            <div className="absolute inset-0 bg-gradient-to-b from-white/0 to-white dark:from-[#1c1c1e]/0 dark:to-[#1c1c1e]" />
           </div>
-          <div className="relative rounded-xl bg-gradient-to-br from-gray-50 to-gray-100/50 p-5 text-center">
-            <p className="text-gray-500 text-sm font-medium mb-1">
+          <div className="relative rounded-xl bg-gradient-to-br from-gray-50 to-gray-100/50 dark:from-gray-800 dark:to-gray-800/50 p-5 text-center">
+            <p className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">
               {card.number === 2 ? '이 뉴스가 나에게 미치는 영향은?' : '지금 당장 할 수 있는 행동은?'}
             </p>
-            <p className="text-gray-400 text-xs mb-3">
+            <p className="text-gray-400 dark:text-gray-500 text-xs mb-3">
               커피 한 잔으로 전체 브리핑을 열어보세요
             </p>
             <button
               onClick={onPaywallClick}
-              className="bg-gray-900 text-white px-6 py-2.5 rounded-full font-semibold text-sm hover:bg-gray-800 active:scale-95 transition-all"
+              className="bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-6 py-2.5 rounded-full font-semibold text-sm hover:bg-gray-800 dark:hover:bg-gray-200 active:scale-95 transition-all"
             >
               ☕ 전체 브리핑 보기
             </button>
