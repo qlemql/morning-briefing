@@ -259,6 +259,7 @@ export default function Home() {
           const todayDate = CacheUtils.getTodayDate();
           CacheUtils.clearBriefing('economy', todayDate);
           CacheUtils.clearBriefing('investment', todayDate);
+          CacheUtils.clearBriefing('lifestyle', todayDate);
         }}
         onClose={() => setShowPaywallModal(false)}
         donationUrl={DONATION_URL || undefined}
