@@ -1,17 +1,19 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import CategoryTab from '@/components/CategoryTab';
 import BriefingCard from '@/components/BriefingCard';
 import CardSkeleton from '@/components/CardSkeleton';
-import PaywallOverlay from '@/components/PaywallOverlay';
-import NotificationPrompt from '@/components/NotificationPrompt';
-import EmailCollector from '@/components/EmailCollector';
-import InstallPrompt from '@/components/InstallPrompt';
 import PullToRefresh from '@/components/PullToRefresh';
-import WelcomeToast from '@/components/WelcomeToast';
 import ToastContainer, { showToast } from '@/components/Toast';
-import UpdateBanner from '@/components/UpdateBanner';
+
+// Lazy-load non-critical overlays (not needed for initial render)
+const PaywallOverlay = lazy(() => import('@/components/PaywallOverlay'));
+const NotificationPrompt = lazy(() => import('@/components/NotificationPrompt'));
+const EmailCollector = lazy(() => import('@/components/EmailCollector'));
+const InstallPrompt = lazy(() => import('@/components/InstallPrompt'));
+const WelcomeToast = lazy(() => import('@/components/WelcomeToast'));
+const UpdateBanner = lazy(() => import('@/components/UpdateBanner'));
 import { BriefingCategory } from '@/lib/types';
 import { CacheUtils } from '@/lib/cache';
 import { getTodayLabel, CATEGORIES } from '@/constants';
@@ -244,12 +246,13 @@ export default function Home() {
   return (
     <PullToRefresh onRefresh={handleRefresh}>
     <div className="min-h-screen bg-gray-50">
-      {/* Welcome toast for first-time visitors */}
-      <WelcomeToast />
       {/* Global toast notifications */}
       <ToastContainer />
-      {/* Update banner for returning users */}
-      <UpdateBanner />
+      {/* Lazy-loaded non-critical UI */}
+      <Suspense fallback={null}>
+        <WelcomeToast />
+        <UpdateBanner />
+      </Suspense>
 
       {/* Top loading bar */}
       {loading && (
@@ -404,6 +407,7 @@ export default function Home() {
       </footer>
 
       {/* Paywall modal */}
+      <Suspense fallback={null}>
       <PaywallOverlay
         isVisible={showPaywallModal}
         onUnlock={async () => {
@@ -445,6 +449,7 @@ export default function Home() {
 
       {/* PWA install prompt */}
       <InstallPrompt />
+      </Suspense>
     </div>
     </PullToRefresh>
   );
