@@ -181,6 +181,19 @@ export default function AdminPage() {
           )}
         </div>
 
+        {/* Budget Warning */}
+        {budget && budgetPct > 80 && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6 flex items-center gap-3">
+            <span className="text-2xl">⚠️</span>
+            <div>
+              <p className="text-sm font-bold text-red-700">API 예산 경고</p>
+              <p className="text-xs text-red-600 mt-0.5">
+                오늘 예산의 {budgetPct}%를 사용했습니다. 남은 호출이 부족할 수 있어요.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Budget Section */}
         {budget && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
