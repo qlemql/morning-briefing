@@ -174,7 +174,15 @@ export async function generateBriefing(
   const categoryKorean = categoryMap[category] || '경제/시사';
   const systemPrompt = SYSTEM_PROMPTS[category] || SYSTEM_PROMPTS.economy;
 
-  const userPrompt = `오늘은 ${date}입니다. 오늘의 ${categoryKorean} 카테고리 아침 브리핑 카드 3장을 작성해주세요. 최신 뉴스를 웹에서 검색하여 반영해주세요.`;
+  const userPrompt = `오늘은 ${date} (KST 기준)입니다. 오늘의 ${categoryKorean} 카테고리 아침 브리핑 카드 3장을 작성해주세요.
+
+중요:
+- 반드시 웹 검색으로 오늘자(${date}) 최신 뉴스를 찾아주세요
+- title은 반드시 20자 이내 (예: "반도체 훈풍, 삼성 주가 급등")
+- summary는 반드시 60자 이내
+- content는 4~6문장, 각 문장에 구체적 수치/사실 포함
+- source에는 실제 언론사명 기재 (예: "한국경제", "Bloomberg")
+- JSON만 출력하세요`;
 
   // Budget guard — prevent overspending
   const budget = await canAffordCall();
@@ -190,7 +198,7 @@ export async function generateBriefing(
   const message = await withRetry(() =>
     client.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 2048,
+      max_tokens: 1500,
       system: [
         {
           type: 'text' as const,
@@ -280,15 +288,30 @@ export async function generateBriefing(
     });
   }
 
-  const validatedCards = parsed.cards.slice(0, 3).map((card, index) => ({
-    id: card.id || `card_${index + 1}`,
-    number: (index + 1) as 1 | 2 | 3,
-    title: card.title || '',
-    content: card.content || '',
-    summary: card.summary || '',
-    type: card.type || (['오늘의핵심', '영향분석', '실전인사이트'][index] as BriefingCard['type']),
-    source: card.source,
-  }));
+  const types = ['오늘의핵심', '영향분석', '실전인사이트'] as const;
+  const validatedCards = parsed.cards.slice(0, 3).map((card, index) => {
+    const title = (card.title || '').trim();
+    const content = (card.content || '').trim();
+    const summary = (card.summary || '').trim();
+
+    // title이 비거나 너무 긴 경우 자르기
+    const clampedTitle = title.length > 25 ? title.substring(0, 23) + '…' : title;
+    const clampedSummary = summary.length > 70 ? summary.substring(0, 68) + '…' : summary;
+
+    if (!content || content.length < 20) {
+      console.warn(`[Claude] Card ${index + 1} has insufficient content (${content.length} chars)`);
+    }
+
+    return {
+      id: card.id || `card_${index + 1}`,
+      number: (index + 1) as 1 | 2 | 3,
+      title: clampedTitle || `카드 ${index + 1}`,
+      content: content || '콘텐츠를 불러오는 중 문제가 발생했습니다.',
+      summary: clampedSummary || '요약을 불러오지 못했습니다',
+      type: card.type || (types[index] as BriefingCard['type']),
+      source: card.source,
+    };
+  });
 
   // Record API call for budget tracking
   await recordCall();
