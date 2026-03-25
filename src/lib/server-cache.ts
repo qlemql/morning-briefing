@@ -9,6 +9,7 @@
  */
 
 import { BriefingCategory } from './types';
+import { kvGet, kvSet, isRedisConfigured } from './kv';
 
 interface CacheEntry {
   data: BriefingCategory;
@@ -56,20 +57,47 @@ export const ServerCache = {
     date: string,
     generator: () => Promise<BriefingCategory>,
   ): Promise<BriefingCategory> {
-    // 1. 캐시 확인
+    // 1. In-memory 캐시 확인
     const cached = this.get(category, date);
     if (cached) return cached;
 
-    // 2. 진행 중인 요청 확인
+    // 2. Redis 캐시 확인 (cold start 시에도 재생성 방지)
+    if (isRedisConfigured()) {
+      try {
+        const redisKey = `mb:briefing:${category}:${date}`;
+        const redisData = await kvGet(redisKey);
+        if (redisData) {
+          const parsed = JSON.parse(redisData) as BriefingCategory;
+          this.set(category, date, parsed); // in-memory에도 캐싱
+          console.log(`[Cache] ${category} ${date} — Redis hit`);
+          return parsed;
+        }
+      } catch (err) {
+        console.warn('[Cache] Redis read failed:', err);
+      }
+    }
+
+    // 3. 진행 중인 요청 확인
     const key = `${category}_${date}`;
     const pending = pendingRequests.get(key);
     if (pending) return pending;
 
-    // 3. 새 요청 시작
+    // 4. 새 요청 시작
     const promise = generator()
-      .then((result) => {
+      .then(async (result) => {
         this.set(category, date, result);
         pendingRequests.delete(key);
+
+        // Redis에도 저장 (24시간 TTL)
+        if (isRedisConfigured()) {
+          try {
+            const redisKey = `mb:briefing:${category}:${date}`;
+            await kvSet(redisKey, JSON.stringify(result), 86400);
+          } catch {
+            // Redis 저장 실패해도 in-memory 캐시는 유지
+          }
+        }
+
         return result;
       })
       .catch((error) => {
