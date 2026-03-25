@@ -12,6 +12,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://morning-briefing-mocha.vercel.app'),
   title: '아침 브리핑 — AI가 매일 아침 정리하는 뉴스',
   description: 'AI가 매일 아침 경제·투자·생활 뉴스를 3장의 카드로 정리해드립니다. 핵심 뉴스, 영향 분석, 실전 인사이트.',
   keywords: ['뉴스', '브리핑', '경제', '투자', '생활', '테크', 'AI', '아침뉴스', '뉴스요약'],

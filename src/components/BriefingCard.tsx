@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { BriefingCard as BriefingCardType } from '@/lib/types';
 import { CARD_TYPE_LABELS, getCategoryById } from '@/constants';
 import { track } from '@/lib/track';
@@ -45,7 +45,7 @@ async function shareCard(card: BriefingCardType): Promise<boolean> {
   return false;
 }
 
-export default function BriefingCard({
+export default memo(function BriefingCard({
   card,
   categoryId,
   isPaywalled,
@@ -289,4 +289,4 @@ export default function BriefingCard({
       )}
     </article>
   );
-}
+});

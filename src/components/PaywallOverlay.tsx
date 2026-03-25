@@ -75,7 +75,7 @@ function PaywallContent({
             </div>
             <div className="flex items-center gap-3 text-sm text-gray-700">
               <span className="text-green-500">✓</span>
-              <span>경제/시사 + 투자 <strong>전체 카테고리</strong></span>
+              <span>경제·투자·생활 <strong>전체 카테고리</strong></span>
             </div>
           </div>
 
@@ -149,7 +149,12 @@ export default function PaywallOverlay({
 
   // key를 사용해 모달이 열릴 때마다 PaywallContent를 새로 마운트 (상태 리셋)
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label="프리미엄 콘텐츠 잠금 해제"
+    >
       <div className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl p-6 sm:mx-4 shadow-2xl">
         <PaywallContent key={String(isVisible)} {...rest} />
       </div>
