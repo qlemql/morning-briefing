@@ -119,3 +119,15 @@ html {
 .loading-bar {
   animation: loadingBar 1.5s ease-in-out infinite;
 }
+
+/* Touch feedback for interactive elements */
+.active\:scale-95:active {
+  transform: scale(0.95);
+}
+
+/* Smooth focus outline for accessibility */
+:focus-visible {
+  outline: 2px solid #1d1d1f;
+  outline-offset: 2px;
+  border-radius: 8px;
+}

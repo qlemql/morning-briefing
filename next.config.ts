@@ -11,6 +11,12 @@ const nextConfig: NextConfig = {
 
   // Reduce bundle by excluding source maps in production
   productionBrowserSourceMaps: false,
+
+  // Compress responses
+  compress: true,
+
+  // Powered-by 헤더 비활성화 (보안)
+  poweredByHeader: false,
 };
 
 export default nextConfig;
