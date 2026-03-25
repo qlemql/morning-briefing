@@ -21,6 +21,29 @@ import { VERSION_LABEL } from '@/lib/version';
 
 const DONATION_URL = 'https://qr.kakaopay.com/Fa0mKvPtZ';
 const SWIPE_THRESHOLD = 60;
+const MAX_RETRIES = 2;
+
+/** Fetch with retry and exponential backoff */
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  retries = MAX_RETRIES,
+): Promise<Response> {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const res = await fetch(url, options);
+      // Don't retry client errors (4xx) except 429
+      if (res.ok || (res.status >= 400 && res.status < 500 && res.status !== 429)) return res;
+      if (i === retries) return res;
+    } catch (err) {
+      if (i === retries) throw err;
+    }
+    // Exponential backoff: 1s, 2s
+    await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, i)));
+  }
+  // Unreachable, but TypeScript requires return
+  return fetch(url, options);
+}
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState(() => {
@@ -143,7 +166,7 @@ export default function Home() {
       if (unlockToken) {
         headers['x-unlock-token'] = unlockToken;
       }
-      const response = await fetch('/api/briefing', {
+      const response = await fetchWithRetry('/api/briefing', {
         method: 'POST',
         headers,
         body: JSON.stringify({ category, date: today }),
@@ -178,16 +201,6 @@ export default function Home() {
         setError({ message: '어제의 브리핑을 보여드립니다.', type: 'stale' });
       } else {
         setError({ message: '네트워크 연결을 확인해주세요.', type: 'offline' });
-        // 자동 재시도 (10초 후, 최대 1회)
-        if (!(err instanceof DOMException)) {
-          setTimeout(() => {
-            setBriefings((prev) => {
-              const next = { ...prev };
-              delete next[category];
-              return next;
-            });
-          }, 10000);
-        }
       }
     } finally {
       setLoading(false);
