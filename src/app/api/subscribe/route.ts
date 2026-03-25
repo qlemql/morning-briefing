@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kvSadd, kvScard, kvSmembers } from '@/lib/kv';
+import { rateLimitSubscribe } from '@/lib/rate-limit';
 
 const SUBSCRIBERS_KEY = 'mb:subscribers';
 
@@ -8,6 +9,19 @@ const SUBSCRIBERS_KEY = 'mb:subscribers';
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
+    // Rate limit: 3 per hour per IP
+    const ip =
+      request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+      request.headers.get('x-real-ip') ||
+      'unknown';
+    const rl = await rateLimitSubscribe(ip);
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': '3600' } },
+      );
+    }
+
     const body = await request.json();
     const { email } = body;
 

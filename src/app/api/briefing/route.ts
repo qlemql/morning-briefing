@@ -3,6 +3,7 @@ import { createHmac } from 'crypto';
 import { generateBriefing } from '@/lib/claude';
 import { ServerCache } from '@/lib/server-cache';
 import { ApiResponse, BriefingCategory } from '@/lib/types';
+import { rateLimitBriefing } from '@/lib/rate-limit';
 
 /**
  * HMAC-SHA256 기반 unlock 토큰 검증
@@ -102,6 +103,25 @@ export async function POST(
   const startTime = Date.now();
 
   try {
+    // Rate limiting
+    const ip =
+      request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+      request.headers.get('x-real-ip') ||
+      'unknown';
+    const rl = await rateLimitBriefing(ip);
+    if (!rl.success) {
+      return NextResponse.json(
+        {
+          meta: { version: '1.0', status: 'error', message: 'Rate limited' },
+          error: { code: 'RATE_LIMITED', message: 'Too many requests' },
+        },
+        {
+          status: 429,
+          headers: { 'Retry-After': '60' },
+        },
+      );
+    }
+
     const body = await request.json();
     const { category, date } = body;
 
