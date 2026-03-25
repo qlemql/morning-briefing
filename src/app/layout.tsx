@@ -23,11 +23,14 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'ko_KR',
     siteName: '아침 브리핑',
+    url: 'https://morning-briefing-mocha.vercel.app',
+    images: [{ url: '/api/og', width: 1200, height: 630, alt: '아침 브리핑' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: '아침 브리핑 — AI 뉴스 브리핑',
     description: 'AI가 매일 아침 경제·투자 뉴스를 3장의 카드로 정리해드립니다.',
+    images: ['/api/og'],
   },
   other: {
     'apple-mobile-web-app-capable': 'yes',

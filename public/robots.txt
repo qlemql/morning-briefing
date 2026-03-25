@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /api/
 
-Sitemap: https://morning-briefing.vercel.app/sitemap.xml
+Sitemap: https://morning-briefing-mocha.vercel.app/sitemap.xml
