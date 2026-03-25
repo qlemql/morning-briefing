@@ -110,6 +110,12 @@ export default function RootLayout({
         >
           본문으로 건너뛰기
         </a>
+        <noscript>
+          <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+            <h1>아침 브리핑</h1>
+            <p>이 서비스는 JavaScript가 필요합니다. 브라우저 설정에서 JavaScript를 활성화해주세요.</p>
+          </div>
+        </noscript>
         <ErrorBoundary>{children}</ErrorBoundary>
         <Analytics />
         <SpeedInsights />
