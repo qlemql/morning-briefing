@@ -281,14 +281,23 @@ export default memo(function BriefingCard({
         </div>
       )}
 
-      {/* Paywall overlay */}
+      {/* Paywall overlay with blur teaser */}
       {shouldBlur && (
         <div className="px-5 pb-5">
+          {/* Blurred content teaser */}
+          <div className="relative overflow-hidden mb-3">
+            <div className="blur-[6px] select-none pointer-events-none" aria-hidden="true">
+              <div className="h-3 w-full bg-gray-200 rounded mb-2" />
+              <div className="h-3 w-5/6 bg-gray-200 rounded mb-2" />
+              <div className="h-3 w-4/6 bg-gray-200 rounded" />
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-b from-white/0 to-white" />
+          </div>
           <div className="relative rounded-xl bg-gradient-to-br from-gray-50 to-gray-100/50 p-5 text-center">
-            <p className="text-gray-400 text-sm mb-1">
+            <p className="text-gray-500 text-sm font-medium mb-1">
               {card.number === 2 ? '이 뉴스가 나에게 미치는 영향은?' : '지금 당장 할 수 있는 행동은?'}
             </p>
-            <p className="text-gray-300 text-xs mb-3">
+            <p className="text-gray-400 text-xs mb-3">
               커피 한 잔으로 전체 브리핑을 열어보세요
             </p>
             <button
