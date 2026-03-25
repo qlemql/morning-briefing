@@ -60,6 +60,7 @@ export default memo(function BriefingCard({
   const [expanded, setExpanded] = useState(card.number === 1);
   const [entered, setEntered] = useState(delay === 0);
   const [showCopied, setShowCopied] = useState(false);
+  const [hasRead, setHasRead] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const [contentHeight, setContentHeight] = useState<number | undefined>(undefined);
 
@@ -82,7 +83,10 @@ export default memo(function BriefingCard({
 
   const toggleExpand = useCallback(() => {
     hapticLight();
-    setExpanded((prev) => !prev);
+    setExpanded((prev) => {
+      if (!prev) setHasRead(true);  // Mark as read when first expanded
+      return !prev;
+    });
     track('card_toggle', { card: card.id, expanded: String(!expanded) });
   }, [card.id, expanded]);
 
@@ -150,8 +154,11 @@ export default memo(function BriefingCard({
             <div className="mt-4 flex items-center gap-1.5">
               <ChevronIcon className={`text-white/50 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
               <span className="text-white/40 text-xs">
-                {expanded ? '접기' : '자세히 보기'}
+                {expanded ? '접기' : hasRead ? '다시 보기' : '자세히 보기'}
               </span>
+              {hasRead && !expanded && (
+                <span className="text-emerald-400/60 text-xs ml-auto">✓ 읽음</span>
+              )}
             </div>
           </div>
 
@@ -238,7 +245,12 @@ export default memo(function BriefingCard({
 
           {/* Expand indicator */}
           {!shouldBlur && (
-            <ChevronIcon className={`text-gray-300 mt-2 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+            <div className="flex flex-col items-center gap-1 mt-2">
+              <ChevronIcon className={`text-gray-300 dark:text-gray-600 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+              {hasRead && !expanded && (
+                <span className="text-emerald-500/60 dark:text-emerald-400/50 text-[10px]">✓</span>
+              )}
+            </div>
           )}
         </div>
       </div>
