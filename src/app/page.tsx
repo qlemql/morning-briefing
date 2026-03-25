@@ -113,7 +113,7 @@ export default function Home() {
         setBriefings((prev) => ({ ...prev, [category]: data.data }));
         CacheUtils.setBriefing(category, today, data.data);
       }
-    } catch {
+    } catch (err) {
       // 네트워크 에러 — 캐시 폴백
       const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
       const fallback = CacheUtils.getBriefing(category, yesterday);
@@ -122,6 +122,16 @@ export default function Home() {
         setError({ message: '어제의 브리핑을 보여드립니다.', type: 'stale' });
       } else {
         setError({ message: '네트워크 연결을 확인해주세요.', type: 'offline' });
+        // 자동 재시도 (10초 후, 최대 1회)
+        if (!(err instanceof DOMException)) {
+          setTimeout(() => {
+            setBriefings((prev) => {
+              const next = { ...prev };
+              delete next[category];
+              return next;
+            });
+          }, 10000);
+        }
       }
     } finally {
       setLoading(false);
@@ -190,10 +200,13 @@ export default function Home() {
         className="mx-auto max-w-lg px-4 py-6 space-y-3"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
+        role="tabpanel"
+        id={`panel-${activeCategory}`}
+        aria-label={`${CATEGORIES.find(c => c.id === activeCategory)?.name || ''} 브리핑`}
       >
         {loading && !briefing ? (
           <>
-            <CardSkeleton />
+            <CardSkeleton isHero />
             <CardSkeleton />
             <CardSkeleton />
           </>
