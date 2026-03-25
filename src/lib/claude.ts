@@ -109,7 +109,13 @@ export async function generateBriefing(
     client.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 2048,
-      system: systemPrompt,
+      system: [
+        {
+          type: 'text' as const,
+          text: systemPrompt,
+          cache_control: { type: 'ephemeral' as const },
+        },
+      ],
       tools: [
         {
           type: 'web_search_20250305',

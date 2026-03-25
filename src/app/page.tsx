@@ -6,6 +6,7 @@ import BriefingCard from '@/components/BriefingCard';
 import CardSkeleton from '@/components/CardSkeleton';
 import PaywallOverlay from '@/components/PaywallOverlay';
 import NotificationPrompt from '@/components/NotificationPrompt';
+import EmailCollector from '@/components/EmailCollector';
 import { BriefingCategory } from '@/lib/types';
 import { CacheUtils } from '@/lib/cache';
 import { getTodayLabel, CATEGORIES } from '@/constants';
@@ -257,6 +258,9 @@ export default function Home() {
 
       {/* Notification subscription prompt */}
       <NotificationPrompt />
+
+      {/* Email newsletter collection */}
+      <EmailCollector />
     </div>
   );
 }
