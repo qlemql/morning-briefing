@@ -16,11 +16,24 @@ export const metadata: Metadata = {
   title: '아침 브리핑 — AI가 매일 아침 정리하는 뉴스',
   description: 'AI가 매일 아침 경제·투자·생활 뉴스를 3장의 카드로 정리해드립니다. 핵심 뉴스, 영향 분석, 실전 인사이트.',
   keywords: ['뉴스', '브리핑', '경제', '투자', '생활', '테크', 'AI', '아침뉴스', '뉴스요약'],
+  robots: {
+    index: true,
+    follow: true,
+    'max-image-preview': 'large',
+    'max-snippet': -1,
+    'max-video-preview': -1,
+  },
   manifest: '/manifest.json',
   icons: [
     { rel: 'icon', url: '/favicon.ico', sizes: '32x32' },
     { rel: 'apple-touch-icon', url: '/apple-touch-icon.png', sizes: '180x180' },
   ],
+  alternates: {
+    canonical: 'https://morning-briefing-mocha.vercel.app',
+    languages: {
+      'ko-KR': 'https://morning-briefing-mocha.vercel.app',
+    },
+  },
   openGraph: {
     title: '아침 브리핑 — AI 뉴스 브리핑',
     description: 'AI가 매일 아침 경제·투자·생활 뉴스를 3장의 카드로 정리해드립니다.',
