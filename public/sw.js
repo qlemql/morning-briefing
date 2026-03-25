@@ -1,7 +1,8 @@
-const CACHE_NAME = 'morning-briefing-v1';
+const CACHE_NAME = 'morning-briefing-v2';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
+  '/offline.html',
 ];
 
 // Install: pre-cache shell
@@ -48,16 +49,24 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Pages & static: stale-while-revalidate
+  // Pages & static: stale-while-revalidate with offline fallback
   event.respondWith(
     caches.match(request).then((cached) => {
-      const networkFetch = fetch(request).then((response) => {
-        if (response.ok) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-        }
-        return response;
-      });
+      const networkFetch = fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() => {
+          // Network failed and no cache → show offline page for navigation requests
+          if (request.mode === 'navigate') {
+            return caches.match('/offline.html');
+          }
+          return new Response('', { status: 503 });
+        });
       return cached || networkFetch;
     })
   );
