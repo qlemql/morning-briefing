@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateBriefing } from '@/lib/claude';
 import { ServerCache } from '@/lib/server-cache';
 
+export const maxDuration = 60;
+
 /**
  * GET /api/cron
  * Vercel Cron Job — 매일 아침 자동으로 두 카테고리 브리핑 생성

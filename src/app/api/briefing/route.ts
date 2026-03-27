@@ -5,6 +5,8 @@ import { ServerCache } from '@/lib/server-cache';
 import { ApiResponse, BriefingCategory } from '@/lib/types';
 import { rateLimitBriefing } from '@/lib/rate-limit';
 
+export const maxDuration = 60;
+
 /**
  * HMAC-SHA256 기반 unlock 토큰 검증
  * 시크릿: CRON_SECRET 환경변수 재활용 (별도 시크릿 불필요)
