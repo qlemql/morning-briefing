@@ -88,33 +88,32 @@ const SYSTEM_PROMPTS: Record<string, string> = {
   lifestyle: LIFESTYLE_SYSTEM_PROMPT,
 };
 
-/** Category-specific allowed domains for web search */
+/**
+ * Category-specific allowed domains for web search
+ * 차단된 도메인 (Anthropic 크롤러 접근 불가):
+ *   mk.co.kr, reuters.com, donga.com, chosun.com, yna.co.kr
+ */
 function getAllowedDomains(category: string): string[] {
   const common = [
     'news.google.com',
     'n.news.naver.com',
     'news.naver.com',
-    'www.yna.co.kr',
-    'www.chosun.com',
-    'www.donga.com',
   ];
   const categoryDomains: Record<string, string[]> = {
     economy: [
       ...common,
       'www.hankyung.com',
-      'www.mk.co.kr',
       'www.sedaily.com',
-      'www.bloomberg.com',
-      'www.reuters.com',
+      'biz.heraldcorp.com',
+      'www.newsis.com',
     ],
     investment: [
       ...common,
       'www.hankyung.com',
-      'www.mk.co.kr',
       'www.sedaily.com',
       'finance.naver.com',
-      'www.bloomberg.com',
-      'www.reuters.com',
+      'biz.heraldcorp.com',
+      'www.newsis.com',
     ],
     lifestyle: [
       ...common,
@@ -123,8 +122,6 @@ function getAllowedDomains(category: string): string[] {
       'www.itworld.co.kr',
       'www.theverge.com',
       'techcrunch.com',
-      'www.hani.co.kr',
-      'www.khan.co.kr',
     ],
   };
   return categoryDomains[category] || categoryDomains.economy;

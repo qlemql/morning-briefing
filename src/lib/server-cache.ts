@@ -10,6 +10,7 @@
 
 import { BriefingCategory } from './types';
 import { kvGet, kvSet, isRedisConfigured } from './kv';
+import { getEvergreenBriefing } from '@/data/evergreen';
 
 interface CacheEntry {
   data: BriefingCategory;
@@ -102,6 +103,14 @@ export const ServerCache = {
       })
       .catch((error) => {
         pendingRequests.delete(key);
+
+        // Evergreen fallback: API 장애 시 상시 콘텐츠 반환
+        const fallback = getEvergreenBriefing(category, date);
+        if (fallback) {
+          console.warn(`[Cache] ${category} ${date} — generator failed, using evergreen fallback`);
+          return fallback;
+        }
+
         throw error;
       });
 

@@ -182,6 +182,9 @@ export async function POST(
       }),
     };
 
+    // Detect evergreen fallback by id prefix
+    const isFallback = briefing.cards.some((card) => card.id.startsWith('eg_'));
+
     return NextResponse.json(
       {
         meta: {
@@ -189,6 +192,7 @@ export async function POST(
           status: 'success',
           processingTimeMs: Date.now() - startTime,
           unlocked: isUnlocked,
+          ...(isFallback && { fallback: true }),
         },
         data: gatedBriefing,
       },
