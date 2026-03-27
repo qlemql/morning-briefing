@@ -43,8 +43,8 @@ async function fetchWithRetry(
       const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
       const res = await fetch(url, { ...options, signal: controller.signal });
       clearTimeout(timeoutId);
-      // Don't retry client errors (4xx) except 429
-      if (res.ok || (res.status >= 400 && res.status < 500 && res.status !== 429)) return res;
+      // Don't retry client errors (4xx) — including 429 to avoid retry storm
+      if (res.ok || (res.status >= 400 && res.status < 500)) return res;
       if (i === retries) return res;
     } catch (err) {
       if (i === retries) throw err;
