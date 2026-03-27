@@ -229,7 +229,7 @@ export async function generateBriefing(
   const message = await withRetry(() =>
     client.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 1500,
+      max_tokens: 16000,
       system: [
         {
           type: 'text' as const,
@@ -256,6 +256,11 @@ export async function generateBriefing(
     ` | Input: ${usage.input_tokens} (cache_read: ${(usage as unknown as Record<string, number>).cache_read_input_tokens || 0})` +
     ` | Output: ${usage.output_tokens}`,
   );
+
+  // Truncation guard: if max_tokens was hit, the JSON is likely incomplete
+  if (message.stop_reason === 'max_tokens') {
+    console.warn(`[Claude] Response truncated (max_tokens). Output: ${usage.output_tokens} tokens. Category: ${category}`);
+  }
 
   // Extract text content from potentially multi-block response
   const rawText = extractTextFromResponse(message.content);
@@ -293,6 +298,29 @@ export async function generateBriefing(
         if (jsonMatch) {
           try { parsed = JSON.parse(jsonMatch[0]); } catch { /* fall through */ }
         }
+      }
+    }
+  }
+
+  // Strategy 4: Attempt to repair truncated JSON (max_tokens cutoff)
+  if (!parsed && message.stop_reason === 'max_tokens') {
+    console.warn('[Claude] Attempting truncated JSON repair...');
+    const cardsMatch = cleaned.match(/"cards"\s*:\s*\[/);
+    if (cardsMatch) {
+      // Find all complete card objects {...}
+      const arrayStart = cleaned.indexOf('[', cardsMatch.index!);
+      const cardRegex = /\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g;
+      const cardSection = cleaned.substring(arrayStart);
+      const cards: unknown[] = [];
+      let m: RegExpExecArray | null;
+      while ((m = cardRegex.exec(cardSection)) !== null) {
+        try {
+          cards.push(JSON.parse(m[0]));
+        } catch { /* skip malformed card */ }
+      }
+      if (cards.length > 0) {
+        parsed = { cards: cards as BriefingCard[] };
+        console.log(`[Claude] Recovered ${cards.length} card(s) from truncated response`);
       }
     }
   }
