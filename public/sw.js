@@ -1,4 +1,4 @@
-const CACHE_NAME = 'morning-briefing-v6';
+const CACHE_NAME = 'morning-briefing-v7';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -30,8 +30,28 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET and cross-origin
-  if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+  // Skip non-GET
+  if (request.method !== 'GET') return;
+
+  // Cache-first for CDN fonts (immutable assets)
+  if (url.hostname === 'cdn.jsdelivr.net') {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        });
+      })
+    );
+    return;
+  }
+
+  // Skip other cross-origin requests
+  if (url.origin !== self.location.origin) return;
 
   // API calls: network-first with 8s timeout, stale cache fallback
   if (url.pathname.startsWith('/api/')) {

@@ -188,7 +188,7 @@ export default function Home() {
     setError(null);
     setSlowLoading(false);
     // Show "still loading" after 6 seconds
-    slowTimerRef.current = setTimeout(() => setSlowLoading(true), 6000);
+    slowTimerRef.current = setTimeout(() => setSlowLoading(true), 3000);
 
     try {
       const today = CacheUtils.getTodayDate();
@@ -294,18 +294,18 @@ export default function Home() {
 
       {/* Top loading bar */}
       {loading && (
-        <div className="fixed top-0 left-0 right-0 z-50 h-0.5 bg-gray-200 dark:bg-gray-800">
+        <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-gray-200 dark:bg-gray-800">
           <div className="h-full bg-gray-900 dark:bg-gray-100 loading-bar" />
         </div>
       )}
 
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800">
-        <div className="mx-auto max-w-lg px-4 pt-5 pb-4">
-          <div className="flex items-center justify-between mb-4">
+      <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-sm border-b border-gray-200/80 dark:border-gray-800">
+        <div className="mx-auto max-w-lg px-4 pt-4 pb-3">
+          <div className="flex items-center justify-between mb-3">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">아침 브리핑</h1>
-              <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-2">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-2">
                 <span>{getTodayLabel()} · {new Date().getHours() < 12 ? '좋은 아침이에요' : new Date().getHours() < 18 ? '좋은 오후예요' : '좋은 저녁이에요'}</span>
               </p>
             </div>
@@ -341,7 +341,7 @@ export default function Home() {
 
       {/* Error banner */}
       {error && (
-        <div className={`mx-auto max-w-lg px-4 pt-4`}>
+        <div className={`mx-auto max-w-lg px-4 pt-3`}>
           <div className={`rounded-xl p-3 text-sm flex items-center gap-2 ${
             error.type === 'stale' || error.type === 'budget'
               ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
@@ -373,7 +373,7 @@ export default function Home() {
       {/* Cards — swipe to switch categories */}
       <main
         id="main-content"
-        className={`mx-auto max-w-lg px-4 py-6 space-y-3 transition-opacity duration-150 ${transitioning ? 'opacity-0' : 'opacity-100'}`}
+        className={`mx-auto max-w-lg px-4 pt-4 pb-6 space-y-3 transition-opacity duration-150 ${transitioning ? 'opacity-0' : 'opacity-100'}`}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         role="tabpanel"
@@ -454,7 +454,7 @@ export default function Home() {
                 track('copy_briefing', { category: activeCategory });
               }
             }}
-            className="mx-auto flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors py-2"
+            className="mx-auto flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors py-3 px-4"
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
@@ -466,7 +466,7 @@ export default function Home() {
 
         {/* Freshness indicator with relative time */}
         {briefing?.generatedAt && (
-          <p className="text-center text-xs text-gray-300 dark:text-gray-600 pt-2">
+          <p className="text-center text-xs text-gray-400 dark:text-gray-500 pt-2">
             {(() => {
               const gen = new Date(briefing.generatedAt);
               const now = new Date();
@@ -504,7 +504,7 @@ export default function Home() {
           </a>
         )}
         {/* [HIDDEN] ReferralCard — 유저 0명 단계에서 레퍼럴 무의미 */}
-        <div className="text-center text-xs text-gray-300 dark:text-gray-600 mt-4 space-y-1">
+        <div className="text-center text-xs text-gray-400 dark:text-gray-500 mt-4 space-y-1">
           <p>© 2026 아침 브리핑 · AI가 매일 아침 정리하는 뉴스</p>
           <p>
             <a href="mailto:thbabu2@gmail.com" className="hover:text-gray-500 transition-colors">

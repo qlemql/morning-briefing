@@ -187,13 +187,13 @@ export default memo(function BriefingCard({
     return (
       <article
         className={`relative rounded-2xl overflow-hidden shadow-lg transition-all duration-400 ease-out ${
-          entered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
+          entered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
         }`}
         aria-label={`${typeInfo.label}: ${card.title}`}
       >
         <div className="card-gradient-hero">
           <div
-            className="p-6 cursor-pointer active:opacity-90 transition-opacity"
+            className="p-6 cursor-pointer active:scale-[0.98] transition-transform"
             onClick={toggleExpand}
             onKeyDown={handleKeyDown}
             role="button"
@@ -210,12 +210,12 @@ export default memo(function BriefingCard({
             </div>
 
             {/* Title */}
-            <h3 className="text-xl font-extrabold text-white leading-tight mb-2">
+            <h3 className="text-[22px] font-bold text-white leading-snug mb-2.5">
               {card.title}
             </h3>
 
             {/* Summary */}
-            <p className="text-sm text-white/70 leading-relaxed">
+            <p className="text-sm text-white/80 leading-relaxed">
               {card.summary}
             </p>
 
@@ -241,7 +241,7 @@ export default memo(function BriefingCard({
           >
             <div ref={contentRef} className="px-6 pb-6">
               <div className="border-t border-white/10 pt-4">
-                <div className="text-base text-white/90 leading-relaxed whitespace-pre-line">
+                <div className="text-base text-white/90 leading-7 whitespace-pre-line">
                   {card.content}
                 </div>
                 <div className="mt-4 flex items-center justify-between">
@@ -261,12 +261,12 @@ export default memo(function BriefingCard({
                       ) : card.source}
                     </p>
                   )}
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-4">
                     {ttsSupported && (
                       <span className="flex items-center gap-1">
                         <button
                           onClick={handleTts}
-                          className="text-xs text-white/40 hover:text-white/70 transition-colors flex items-center gap-1"
+                          className="text-xs text-white/40 hover:text-white/70 transition-colors flex items-center gap-1 py-2 px-1"
                           aria-label={ttsState === 'playing' ? '일시정지' : ttsState === 'paused' ? '계속 듣기' : `${card.title} 듣기`}
                         >
                           {ttsState === 'playing' ? <PauseIcon /> : <PlayIcon />}
@@ -275,7 +275,7 @@ export default memo(function BriefingCard({
                         {ttsState !== 'idle' && (
                           <button
                             onClick={handleStop}
-                            className="text-xs text-white/40 hover:text-white/70 transition-colors"
+                            className="text-xs text-white/40 hover:text-white/70 transition-colors py-2 px-1"
                             aria-label="정지"
                           >
                             <StopIcon />
@@ -285,7 +285,7 @@ export default memo(function BriefingCard({
                     )}
                     <button
                       onClick={handleShare}
-                      className="text-xs text-white/40 hover:text-white/70 transition-colors flex items-center gap-1"
+                      className="text-xs text-white/40 hover:text-white/70 transition-colors flex items-center gap-1 py-2 px-1"
                       aria-label={`${card.title} 공유하기`}
                     >
                       {showCopied ? (
@@ -311,12 +311,12 @@ export default memo(function BriefingCard({
   return (
     <article
       className={`relative rounded-2xl bg-white dark:bg-[#1c1c1e] overflow-hidden shadow-sm transition-all duration-400 ease-out ${
-        entered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
+        entered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
       } ${shouldBlur ? '' : 'border border-gray-100 dark:border-gray-800'}`}
       aria-label={`${typeInfo.label}: ${card.title}`}
     >
       <div
-        className={`p-5 ${!shouldBlur ? 'cursor-pointer active:bg-gray-50/50 dark:active:bg-gray-800/50 transition-colors' : ''}`}
+        className={`p-5 ${!shouldBlur ? 'cursor-pointer active:bg-gray-50/50 dark:active:bg-gray-800/50 active:scale-[0.99] transition-all' : ''}`}
         onClick={() => !shouldBlur && toggleExpand()}
         onKeyDown={!shouldBlur ? handleKeyDown : undefined}
         role={!shouldBlur ? 'button' : undefined}
@@ -371,7 +371,7 @@ export default memo(function BriefingCard({
         >
           <div ref={contentRef} className="px-5 pb-5">
             <div className="border-t border-gray-50 dark:border-gray-800 pt-4">
-              <div className="text-[15px] text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+              <div className="text-[15px] text-gray-700 dark:text-gray-300 leading-7 whitespace-pre-line">
                 {card.content}
               </div>
               <div className="mt-3 flex items-center justify-between">
@@ -391,12 +391,12 @@ export default memo(function BriefingCard({
                     ) : card.source}
                   </p>
                 )}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                   {ttsSupported && (
                     <span className="flex items-center gap-1">
                       <button
                         onClick={handleTts}
-                        className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex items-center gap-1"
+                        className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex items-center gap-1 py-2 px-1"
                         aria-label={ttsState === 'playing' ? '일시정지' : ttsState === 'paused' ? '계속 듣기' : `${card.title} 듣기`}
                       >
                         {ttsState === 'playing' ? <PauseIcon /> : <PlayIcon />}
@@ -405,7 +405,7 @@ export default memo(function BriefingCard({
                       {ttsState !== 'idle' && (
                         <button
                           onClick={handleStop}
-                          className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                          className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors py-2 px-1"
                           aria-label="정지"
                         >
                           <StopIcon />
@@ -415,7 +415,7 @@ export default memo(function BriefingCard({
                   )}
                   <button
                     onClick={handleShare}
-                    className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex items-center gap-1"
+                    className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex items-center gap-1 py-2 px-1"
                     aria-label={`${card.title} 공유하기`}
                   >
                     {showCopied ? (

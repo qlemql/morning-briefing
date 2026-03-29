@@ -61,7 +61,7 @@ export default function TrialBanner() {
             setShow(false);
             sessionStorage.setItem('mb_trial_banner_dismissed', '1');
           }}
-          className="text-current opacity-40 hover:opacity-70 text-xs ml-1"
+          className="text-current opacity-40 hover:opacity-70 text-xs ml-1 p-2 -m-2"
         >
           ✕
         </button>

@@ -7,7 +7,7 @@ import './globals.css';
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
+  maximumScale: 5,
   themeColor: '#1d1d1f',
 };
 
@@ -90,21 +90,40 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               '@context': 'https://schema.org',
-              '@type': 'WebApplication',
-              name: '아침 브리핑',
-              description: 'AI가 매일 아침 경제·투자·생활 뉴스를 3장의 카드로 정리해드립니다.',
-              url: 'https://morning-briefing-mocha.vercel.app',
-              applicationCategory: 'NewsApplication',
-              operatingSystem: 'Web',
-              offers: {
-                '@type': 'Offer',
-                price: '0',
-                priceCurrency: 'KRW',
-              },
-              author: {
-                '@type': 'Organization',
-                name: '아침 브리핑',
-              },
+              '@graph': [
+                {
+                  '@type': 'WebSite',
+                  name: '아침 브리핑',
+                  url: 'https://morning-briefing-mocha.vercel.app',
+                  description: 'AI가 매일 아침 경제·투자·생활 뉴스를 3장의 카드로 정리해드립니다.',
+                  inLanguage: 'ko-KR',
+                  publisher: {
+                    '@type': 'Organization',
+                    name: '아침 브리핑',
+                    url: 'https://morning-briefing-mocha.vercel.app',
+                    logo: {
+                      '@type': 'ImageObject',
+                      url: 'https://morning-briefing-mocha.vercel.app/icon-512.png',
+                      width: 512,
+                      height: 512,
+                    },
+                  },
+                },
+                {
+                  '@type': 'WebApplication',
+                  name: '아침 브리핑',
+                  description: 'AI가 매일 아침 경제·투자·생활 뉴스를 3장의 카드로 정리해드립니다. 핵심 뉴스, 영향 분석, 실전 인사이트.',
+                  url: 'https://morning-briefing-mocha.vercel.app',
+                  applicationCategory: 'NewsApplication',
+                  operatingSystem: 'Web',
+                  browserRequirements: 'Requires JavaScript',
+                  offers: {
+                    '@type': 'Offer',
+                    price: '0',
+                    priceCurrency: 'KRW',
+                  },
+                },
+              ],
             }),
           }}
         />
@@ -117,9 +136,17 @@ export default function RootLayout({
           본문으로 건너뛰기
         </a>
         <noscript>
-          <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-            <h1>아침 브리핑</h1>
-            <p>이 서비스는 JavaScript가 필요합니다. 브라우저 설정에서 JavaScript를 활성화해주세요.</p>
+          <div style={{ textAlign: 'center', padding: '40px 20px', maxWidth: '600px', margin: '0 auto' }}>
+            <h1>아침 브리핑 - AI가 매일 아침 정리하는 뉴스</h1>
+            <p>AI가 매일 아침 경제, 투자, 생활/테크 뉴스를 3장의 카드로 정리해드립니다.</p>
+            <p style={{ marginTop: '16px' }}>이 서비스는 JavaScript가 필요합니다. 브라우저 설정에서 JavaScript를 활성화해주세요.</p>
+            <nav style={{ marginTop: '24px' }}>
+              <ul style={{ listStyle: 'none', padding: 0 }}>
+                <li><a href="/?category=economy">경제/시사 브리핑</a></li>
+                <li><a href="/?category=investment">투자 브리핑</a></li>
+                <li><a href="/?category=lifestyle">생활/테크 브리핑</a></li>
+              </ul>
+            </nav>
           </div>
         </noscript>
         <ErrorBoundary>{children}</ErrorBoundary>

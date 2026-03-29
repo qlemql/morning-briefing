@@ -17,6 +17,16 @@ const nextConfig: NextConfig = {
 
   // Powered-by 헤더 비활성화 (보안)
   poweredByHeader: false,
+
+  // Long-term cache for static assets with content hash
+  headers: async () => [
+    {
+      source: '/_next/static/(.*)',
+      headers: [
+        { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+      ],
+    },
+  ],
 };
 
 export default nextConfig;

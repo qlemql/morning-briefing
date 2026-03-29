@@ -73,7 +73,7 @@ export default function MarketSnapshot() {
   if (failed) return null;
 
   return (
-    <div className="mb-4">
+    <div className="mb-1">
       <div
         ref={scrollRef}
         className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4"
