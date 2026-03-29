@@ -142,6 +142,15 @@ html {
   animation: loadingBar 1.5s ease-in-out infinite;
 }
 
+/* Hide scrollbar for horizontal scroll containers */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Touch feedback for interactive elements */
 .active\:scale-95:active {
   transform: scale(0.95);

@@ -118,6 +118,34 @@ export async function kvExpire(key: string, seconds: number): Promise<void> {
   // In-memory: ignore TTL (acceptable for dev)
 }
 
+/* ---------- List operations ---------- */
+
+export async function kvLpush(key: string, value: string): Promise<number> {
+  if (USE_REDIS) return redis<number>(['LPUSH', key, value]);
+  const raw = mem.get(key);
+  const list: string[] = raw ? JSON.parse(raw) : [];
+  list.unshift(value);
+  mem.set(key, JSON.stringify(list));
+  return list.length;
+}
+
+export async function kvRpop(key: string): Promise<string | null> {
+  if (USE_REDIS) return redis<string | null>(['RPOP', key]);
+  const raw = mem.get(key);
+  if (!raw) return null;
+  const list: string[] = JSON.parse(raw);
+  if (list.length === 0) return null;
+  const item = list.pop()!;
+  mem.set(key, JSON.stringify(list));
+  return item;
+}
+
+export async function kvLlen(key: string): Promise<number> {
+  if (USE_REDIS) return redis<number>(['LLEN', key]);
+  const raw = mem.get(key);
+  return raw ? (JSON.parse(raw) as string[]).length : 0;
+}
+
 export function isRedisConfigured(): boolean {
   return USE_REDIS;
 }

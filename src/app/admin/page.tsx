@@ -35,6 +35,11 @@ interface SubscriberData {
   emails: string[];
 }
 
+interface SNSQueueData {
+  available: boolean;
+  counts: Record<string, number>;
+}
+
 interface HealthData {
   status: string;
   responseMs: number;
@@ -53,6 +58,7 @@ export default function AdminPage() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [subscribers, setSubscribers] = useState<SubscriberData | null>(null);
   const [health, setHealth] = useState<HealthData | null>(null);
+  const [snsQueue, setSnsQueue] = useState<SNSQueueData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [cronRunning, setCronRunning] = useState(false);
@@ -64,10 +70,11 @@ export default function AdminPage() {
     setError('');
 
     try {
-      const [analyticsRes, subscribersRes, healthRes] = await Promise.all([
+      const [analyticsRes, subscribersRes, healthRes, snsQueueRes] = await Promise.all([
         fetch(`/api/analytics?secret=${encodeURIComponent(secretKey)}`),
         fetch(`/api/subscribe?secret=${encodeURIComponent(secretKey)}`),
         fetch('/api/health').catch(() => null),
+        fetch(`/api/sns-queue?secret=${encodeURIComponent(secretKey)}`).catch(() => null),
       ]);
 
       if (!analyticsRes.ok || !subscribersRes.ok) {
@@ -80,6 +87,10 @@ export default function AdminPage() {
       if (healthRes?.ok) {
         const healthData = await healthRes.json();
         setHealth(healthData);
+      }
+      if (snsQueueRes?.ok) {
+        const snsData = await snsQueueRes.json();
+        setSnsQueue(snsData);
       }
 
       setAnalytics(analyticsData.data);
@@ -332,6 +343,36 @@ export default function AdminPage() {
                   {email}
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* SNS Queue */}
+        {snsQueue && (
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold text-gray-900 dark:text-gray-100">SNS 포스팅 큐</h2>
+              {!snsQueue.available && (
+                <span className="text-xs px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                  Redis 미연결
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              {Object.entries(snsQueue.counts).map(([platform, count]) => {
+                const labels: Record<string, string> = {
+                  twitter: 'Twitter/X',
+                  threads: 'Threads',
+                  instagram: 'Instagram',
+                };
+                return (
+                  <div key={platform} className="text-center p-3 rounded-xl bg-gray-50 dark:bg-gray-800">
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{count}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{labels[platform] || platform}</div>
+                    <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">대기중</div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

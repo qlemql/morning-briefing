@@ -1,6 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { BriefingCard, BriefingCategory } from './types';
 import { canAffordCall, recordCall } from './budget';
+import { filterBriefing } from './content-filter';
+import { validateBriefing } from './content-validator';
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -373,10 +375,36 @@ export async function generateBriefing(
   // Record API call for budget tracking
   await recordCall({ input_tokens: usage.input_tokens, output_tokens: usage.output_tokens });
 
-  return {
+  const result: BriefingCategory = {
     category,
     categoryName: categoryKorean,
     generatedAt: new Date().toISOString(),
     cards: validatedCards,
   };
+
+  // Content safety filter — 위험 표현 자동 치환 (비용 0)
+  const { filtered, warnings } = filterBriefing(result);
+  if (warnings.length > 0) {
+    console.warn(
+      `[ContentFilter] ${category}: ${warnings.length} expression(s) filtered —`,
+      warnings.map((w) => `[${w.category}] "${w.original}" -> "${w.replaced}" (${w.cardId}.${w.field})`),
+    );
+  }
+
+  // Content quality validation — 규격 검증 (서빙은 차단하지 않음)
+  const validation = validateBriefing(filtered);
+  if (!validation.valid) {
+    console.warn(
+      `[ContentValidator] ${category}: ${validation.errors.length} error(s) —`,
+      validation.errors,
+    );
+  }
+  if (validation.warnings.length > 0) {
+    console.warn(
+      `[ContentValidator] ${category}: ${validation.warnings.length} warning(s) —`,
+      validation.warnings,
+    );
+  }
+
+  return filtered;
 }

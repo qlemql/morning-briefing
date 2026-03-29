@@ -17,6 +17,7 @@ const EmailCollector = lazy(() => import('@/components/EmailCollector'));
 const InstallPrompt = lazy(() => import('@/components/InstallPrompt'));
 const WelcomeToast = lazy(() => import('@/components/WelcomeToast'));
 const UpdateBanner = lazy(() => import('@/components/UpdateBanner'));
+const MarketSnapshot = lazy(() => import('@/components/MarketSnapshot'));
 import { BriefingCategory } from '@/lib/types';
 import { CacheUtils } from '@/lib/cache';
 import { getTodayLabel, CATEGORIES } from '@/constants';
@@ -366,6 +367,13 @@ export default function Home() {
         aria-roledescription={`panel-${activeCategory}`}
         aria-label={`${CATEGORIES.find(c => c.id === activeCategory)?.name || ''} 브리핑`}
       >
+        {/* Market snapshot pills — investment tab only */}
+        {activeCategory === 'investment' && (
+          <Suspense fallback={null}>
+            <MarketSnapshot />
+          </Suspense>
+        )}
+
         {loading && !briefing ? (
           <>
             <CardSkeleton isHero />

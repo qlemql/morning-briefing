@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateBriefing } from '@/lib/claude';
 import { ServerCache } from '@/lib/server-cache';
 import { canAffordCall } from '@/lib/budget';
+import { formatForAllPlatforms } from '@/lib/sns-formatter';
+import { enqueueSNSPost, isQueueAvailable } from '@/lib/sns-queue';
 
 export const maxDuration = 60;
 
@@ -63,6 +65,33 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
   }
 
+  // SNS queue: format and enqueue posts for successful briefings
+  const snsResults: Record<string, string> = {};
+  if (isQueueAvailable()) {
+    for (const category of categories) {
+      if (!results[category]?.startsWith('OK')) continue;
+      try {
+        const briefing = ServerCache.get(category, today);
+        if (!briefing || !briefing.cards[0]) continue;
+
+        const formatted = formatForAllPlatforms(briefing);
+        for (const [platform, content] of Object.entries(formatted)) {
+          if (content) {
+            await enqueueSNSPost(platform, content, category, today);
+          }
+        }
+        snsResults[category] = 'queued';
+      } catch (snsError) {
+        // SNS queue failure should never affect briefing serving
+        console.warn(`[Cron] SNS queue failed for ${category}:`, snsError);
+        snsResults[category] = 'failed';
+      }
+    }
+    if (Object.keys(snsResults).length > 0) {
+      console.log('[Cron] SNS queue results:', snsResults);
+    }
+  }
+
   const elapsed = Date.now() - startTime;
   const failCount = Object.values(results).filter((r) => r.startsWith('FAIL')).length;
   console.log(
@@ -74,6 +103,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   return NextResponse.json({
     date: today,
     results,
+    snsQueue: Object.keys(snsResults).length > 0 ? snsResults : undefined,
     elapsedMs: elapsed,
     timestamp: new Date().toISOString(),
   });
