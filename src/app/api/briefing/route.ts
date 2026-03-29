@@ -3,8 +3,44 @@ import { createHmac } from 'crypto';
 import { ServerCache } from '@/lib/server-cache';
 import { ApiResponse, BriefingCategory } from '@/lib/types';
 import { rateLimitBriefing } from '@/lib/rate-limit';
+import { kvGet } from '@/lib/kv';
 
 export const maxDuration = 60;
+
+/**
+ * 검수 승인 상태 확인
+ * 06:50 KST 이후면 자동 승인, 그 전이면 Redis에서 승인 상태 체크
+ */
+async function checkReviewApproval(date: string, category: string): Promise<boolean> {
+  // 06:50 KST 이후면 자동 승인 (타임아웃)
+  const now = new Date(Date.now() + 9 * 3600 * 1000);
+  const hours = now.getUTCHours();
+  const minutes = now.getUTCMinutes();
+  if (hours > 6 || (hours === 6 && minutes >= 50)) {
+    return true;
+  }
+
+  // Redis에서 승인 상태 확인
+  try {
+    const status = await kvGet(`mb:review:${date}:${category}`);
+    return status === 'approved';
+  } catch {
+    // Redis 미연결 시 승인된 것으로 처리 (서비스 안정성 우선)
+    return true;
+  }
+}
+
+/**
+ * 미승인 카테고리용: evergreen fallback 반환
+ * 실제 생성된 브리핑이 있어도 미승인이면 evergreen을 서빙
+ */
+async function getEvergreenOrCached(category: string, date: string): Promise<BriefingCategory> {
+  const { getEvergreenBriefing } = await import('@/data/evergreen');
+  const fallback = getEvergreenBriefing(category, date);
+  if (fallback) return fallback;
+  // fallback이 없으면 실제 캐시에서 가져옴 (안전장치)
+  return ServerCache.getOnly(category, date);
+}
 
 /**
  * HMAC-SHA256 기반 unlock 토큰 검증
@@ -159,8 +195,15 @@ export async function POST(
     // Use provided date or today (KST)
     const targetDate = date || new Date(Date.now() + 9 * 3600 * 1000).toISOString().split('T')[0];
 
+    // Review approval check: serve evergreen if not approved and before auto-publish time
+    const isApproved = await checkReviewApproval(targetDate, category);
+
     // Cache-only lookup (no API generation — generation is cron-only)
-    const briefing = await ServerCache.getOnly(category, targetDate);
+    // If not approved, getOnly will still return evergreen fallback naturally,
+    // but we force evergreen for unapproved categories
+    const briefing = isApproved
+      ? await ServerCache.getOnly(category, targetDate)
+      : await getEvergreenOrCached(category, targetDate);
 
     // Check HMAC-signed unlock token
     const unlockToken = request.headers.get('x-unlock-token') || '';

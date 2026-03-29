@@ -46,6 +46,25 @@ interface HealthData {
   checks: Record<string, { ok: boolean; detail?: string }>;
 }
 
+interface ReviewCardPreview {
+  number: number;
+  title: string;
+  summary: string;
+  content: string;
+}
+
+interface ReviewCategoryData {
+  status: 'approved' | 'pending';
+  cards: ReviewCardPreview[];
+}
+
+interface ReviewData {
+  date: string;
+  autoPublish: boolean;
+  autoPublishTime: string;
+  categories: Record<string, ReviewCategoryData>;
+}
+
 const CATEGORY_LABELS: Record<string, string> = {
   economy: '경제',
   investment: '투자',
@@ -64,17 +83,34 @@ export default function AdminPage() {
   const [cronRunning, setCronRunning] = useState(false);
   const [cronResult, setCronResult] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<string>('');
+  const [reviewData, setReviewData] = useState<ReviewData | null>(null);
+  const [reviewLoading, setReviewLoading] = useState<Record<string, boolean>>({});
+
+  const fetchReviewData = useCallback(async (secretKey: string) => {
+    try {
+      const res = await fetch('/api/admin/review', {
+        headers: { Authorization: `Bearer ${secretKey}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setReviewData(data);
+      }
+    } catch {
+      // silently fail
+    }
+  }, []);
 
   const fetchData = useCallback(async (secretKey: string) => {
     setLoading(true);
     setError('');
 
     try {
+      const authHeaders = { Authorization: `Bearer ${secretKey}` };
       const [analyticsRes, subscribersRes, healthRes, snsQueueRes] = await Promise.all([
-        fetch(`/api/analytics?secret=${encodeURIComponent(secretKey)}`),
-        fetch(`/api/subscribe?secret=${encodeURIComponent(secretKey)}`),
+        fetch('/api/analytics', { headers: authHeaders }),
+        fetch('/api/subscribe', { headers: authHeaders }),
         fetch('/api/health').catch(() => null),
-        fetch(`/api/sns-queue?secret=${encodeURIComponent(secretKey)}`).catch(() => null),
+        fetch('/api/sns-queue', { headers: authHeaders }).catch(() => null),
       ]);
 
       if (!analyticsRes.ok || !subscribersRes.ok) {
@@ -97,12 +133,36 @@ export default function AdminPage() {
       setSubscribers(subscribersData);
       setAuthenticated(true);
       setLastRefresh(new Date().toLocaleTimeString('ko-KR'));
+
+      // 검수 데이터도 함께 로드
+      fetchReviewData(secretKey);
     } catch {
       setError('데이터를 불러올 수 없습니다.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchReviewData]);
+
+  const toggleReview = useCallback(async (category: string, action: 'approve' | 'pending') => {
+    setReviewLoading((prev) => ({ ...prev, [category]: true }));
+    try {
+      const res = await fetch('/api/admin/review', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${secret}`,
+        },
+        body: JSON.stringify({ category, action }),
+      });
+      if (res.ok) {
+        await fetchReviewData(secret);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setReviewLoading((prev) => ({ ...prev, [category]: false }));
+    }
+  }, [secret, fetchReviewData]);
 
   const triggerCron = useCallback(async () => {
     setCronRunning(true);
@@ -219,6 +279,106 @@ export default function AdminPage() {
             </p>
           )}
         </div>
+
+        {/* Briefing Review Section */}
+        {reviewData && (
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-bold text-gray-900 dark:text-gray-100">오늘의 브리핑 검수</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {reviewData.date} | 자동 게시: {reviewData.autoPublishTime}
+                  {reviewData.autoPublish && (
+                    <span className="ml-2 text-emerald-600 font-semibold">[자동 게시됨]</span>
+                  )}
+                </p>
+              </div>
+              {!reviewData.autoPublish && <AutoPublishTimer />}
+            </div>
+
+            <div className="space-y-4">
+              {(['economy', 'investment', 'lifestyle'] as const).map((cat) => {
+                const catData = reviewData.categories[cat];
+                if (!catData) return null;
+                const isApproved = catData.status === 'approved';
+                const isLoading = reviewLoading[cat] || false;
+
+                return (
+                  <div
+                    key={cat}
+                    className={`rounded-xl border p-4 ${
+                      isApproved
+                        ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20'
+                        : 'border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-900 dark:text-gray-100">
+                          {CATEGORY_LABELS[cat] || cat}
+                        </span>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            isApproved
+                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300'
+                              : 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'
+                          }`}
+                        >
+                          {isApproved ? '승인됨' : '보류'}
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => toggleReview(cat, 'approve')}
+                          disabled={isLoading || isApproved}
+                          className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95"
+                        >
+                          {isLoading ? '...' : '승인'}
+                        </button>
+                        <button
+                          onClick={() => toggleReview(cat, 'pending')}
+                          disabled={isLoading || !isApproved}
+                          className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 bg-amber-500 text-white hover:bg-amber-600 active:scale-95"
+                        >
+                          {isLoading ? '...' : '보류'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Card Previews */}
+                    {catData.cards.length > 0 ? (
+                      <div className="space-y-2">
+                        {catData.cards.map((card) => (
+                          <div
+                            key={`${cat}-${card.number}`}
+                            className="bg-white/60 dark:bg-gray-800/60 rounded-lg px-3 py-2"
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                                {card.number}
+                              </span>
+                              <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                {card.title}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{card.summary}</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 line-clamp-2">
+                              {card.content}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 dark:text-gray-500">
+                        아직 브리핑이 생성되지 않았습니다.
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Budget Warning */}
         {budget && budgetPct > 80 && (
@@ -426,6 +586,44 @@ function KPICard({ label, value, icon }: { label: string; value: string | number
         <span className="text-xs text-gray-500 dark:text-gray-400">{label}</span>
       </div>
       <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{value}</div>
+    </div>
+  );
+}
+
+/**
+ * 06:50 KST까지 남은 시간 카운트다운 타이머
+ */
+function AutoPublishTimer() {
+  const [remaining, setRemaining] = useState('');
+
+  useEffect(() => {
+    function update() {
+      const now = new Date(Date.now() + 9 * 3600 * 1000);
+      const target = new Date(now);
+      target.setUTCHours(6, 50, 0, 0);
+
+      if (now >= target) {
+        setRemaining('자동 게시됨');
+        return;
+      }
+
+      const diff = target.getTime() - now.getTime();
+      const mins = Math.floor(diff / 60000);
+      const secs = Math.floor((diff % 60000) / 1000);
+      setRemaining(`${mins}분 ${secs.toString().padStart(2, '0')}초`);
+    }
+
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="text-right">
+      <div className="text-xs text-gray-500 dark:text-gray-400">자동 게시까지</div>
+      <div className="text-sm font-mono font-bold text-amber-600 dark:text-amber-400">
+        {remaining}
+      </div>
     </div>
   );
 }
