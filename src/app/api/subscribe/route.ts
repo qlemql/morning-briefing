@@ -17,7 +17,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const rl = await rateLimitSubscribe(ip);
     if (!rl.success) {
       return NextResponse.json(
-        { error: 'Too many requests' },
+        {
+          meta: { version: '1.0', status: 'error' },
+          error: { code: 'RATE_LIMITED', message: 'Too many requests' },
+        },
         { status: 429, headers: { 'Retry-After': '3600' } },
       );
     }
@@ -30,7 +33,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       typeof email !== 'string' ||
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
     ) {
-      return NextResponse.json({ error: 'Invalid email' }, { status: 400 });
+      return NextResponse.json(
+        {
+          meta: { version: '1.0', status: 'error' },
+          error: { code: 'INVALID_EMAIL', message: 'Invalid email' },
+        },
+        { status: 400 },
+      );
     }
 
     const normalized = email.trim().toLowerCase();
@@ -38,9 +47,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const count = await kvScard(SUBSCRIBERS_KEY);
 
     console.log(`[Subscribe] ${normalized} (total: ${count})`);
-    return NextResponse.json({ ok: true, count }, { status: 200 });
+    return NextResponse.json(
+      { meta: { version: '1.0', status: 'success' }, data: { count } },
+      { status: 200 },
+    );
   } catch {
-    return NextResponse.json({ error: 'Bad request' }, { status: 400 });
+    return NextResponse.json(
+      {
+        meta: { version: '1.0', status: 'error' },
+        error: { code: 'BAD_REQUEST', message: 'Bad request' },
+      },
+      { status: 400 },
+    );
   }
 }
 
@@ -50,7 +68,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const secret = request.nextUrl.searchParams.get('secret');
   if (secret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json(
+      {
+        meta: { version: '1.0', status: 'error' },
+        error: { code: 'UNAUTHORIZED', message: 'Unauthorized' },
+      },
+      { status: 401 },
+    );
   }
 
   const [count, emails] = await Promise.all([
@@ -58,5 +82,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     kvSmembers(SUBSCRIBERS_KEY),
   ]);
 
-  return NextResponse.json({ count, emails });
+  return NextResponse.json({
+    meta: { version: '1.0', status: 'success' },
+    data: { count, emails },
+  });
 }

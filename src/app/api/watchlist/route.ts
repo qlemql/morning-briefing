@@ -28,7 +28,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   if (!tickersParam) {
     return NextResponse.json(
-      { error: 'Missing tickers parameter' },
+      {
+        meta: { version: '1.0', status: 'error' },
+        error: { code: 'MISSING_PARAM', message: 'Missing tickers parameter' },
+      },
       { status: 400 },
     );
   }
@@ -42,7 +45,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   if (tickers.length === 0) {
     return NextResponse.json(
-      { error: 'No valid tickers provided' },
+      {
+        meta: { version: '1.0', status: 'error' },
+        error: { code: 'INVALID_TICKERS', message: 'No valid tickers provided' },
+      },
       { status: 400 },
     );
   }
@@ -53,7 +59,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const cached = cache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
     return NextResponse.json(
-      { data: cached.data, cached: true },
+      {
+        meta: { version: '1.0', status: 'success', cached: true },
+        data: cached.data,
+      },
       {
         status: 200,
         headers: {
@@ -115,7 +124,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     cache.set(cacheKey, { data, timestamp: Date.now() });
 
     return NextResponse.json(
-      { data, cached: false },
+      {
+        meta: { version: '1.0', status: 'success', cached: false },
+        data,
+      },
       {
         status: 200,
         headers: {
@@ -127,7 +139,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // Serve stale cache on error
     if (cached) {
       return NextResponse.json(
-        { data: cached.data, cached: true, stale: true },
+        {
+          meta: { version: '1.0', status: 'success', cached: true, stale: true },
+          data: cached.data,
+        },
         {
           status: 200,
           headers: {
@@ -139,7 +154,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     console.error('[watchlist] fetch failed:', err);
     return NextResponse.json(
-      { error: 'Failed to fetch watchlist data' },
+      {
+        meta: { version: '1.0', status: 'error' },
+        error: { code: 'FETCH_FAILED', message: 'Failed to fetch watchlist data' },
+      },
       { status: 502 },
     );
   }

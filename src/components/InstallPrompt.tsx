@@ -73,7 +73,7 @@ export default function InstallPrompt() {
             onClick={handleDismiss}
             className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1"
           >
-            괜찮아요
+            나중에
           </button>
           <button
             onClick={handleInstall}

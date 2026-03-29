@@ -27,9 +27,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     await markUnlocked(userId);
     await trackEvent('unlock');
 
-    return NextResponse.json({ ok: true, unlocked: true });
+    return NextResponse.json({
+      meta: { version: '1.0', status: 'success' },
+      data: { unlocked: true },
+    });
   } catch {
-    return NextResponse.json({ ok: false }, { status: 500 });
+    return NextResponse.json(
+      {
+        meta: { version: '1.0', status: 'error' },
+        error: { code: 'UNLOCK_FAILED', message: 'Failed to unlock' },
+      },
+      { status: 500 },
+    );
   }
 }
 
@@ -42,7 +51,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const unlocked = await isUnlocked(userId);
 
     return NextResponse.json(
-      { unlocked },
+      {
+        meta: { version: '1.0', status: 'success' },
+        data: { unlocked },
+      },
       {
         headers: {
           'Cache-Control': 'no-store',
@@ -50,6 +62,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       },
     );
   } catch {
-    return NextResponse.json({ unlocked: false });
+    return NextResponse.json({
+      meta: { version: '1.0', status: 'success' },
+      data: { unlocked: false },
+    });
   }
 }

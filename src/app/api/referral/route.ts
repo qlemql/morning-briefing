@@ -19,7 +19,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     if (!code || action !== 'register') {
       return NextResponse.json(
-        { error: 'Invalid request' },
+        {
+          meta: { version: '1.0', status: 'error' },
+          error: { code: 'INVALID_REQUEST', message: 'Invalid request' },
+        },
         { status: 400 },
       );
     }
@@ -27,7 +30,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Validate code format: 6 alphanumeric chars
     if (!/^[A-Z0-9]{6}$/.test(code)) {
       return NextResponse.json(
-        { error: 'Invalid referral code' },
+        {
+          meta: { version: '1.0', status: 'error' },
+          error: { code: 'INVALID_CODE', message: 'Invalid referral code' },
+        },
         { status: 400 },
       );
     }
@@ -45,7 +51,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const added = await kvSadd(`mb:ref:${code}:visitors`, fingerprint);
     if (added === 0) {
       // Already registered — no double counting
-      return NextResponse.json({ ok: true, duplicate: true });
+      return NextResponse.json({
+        meta: { version: '1.0', status: 'success' },
+        data: { duplicate: true },
+      });
     }
 
     // Increment count
@@ -56,14 +65,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     await kvSet(`mb:ref:${code}:bonus`, String(bonus));
 
     return NextResponse.json({
-      ok: true,
-      invited: count,
-      bonusDays: bonus,
+      meta: { version: '1.0', status: 'success' },
+      data: { invited: count, bonusDays: bonus },
     });
   } catch (err) {
     console.error('Referral POST error:', err);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      {
+        meta: { version: '1.0', status: 'error' },
+        error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },
+      },
       { status: 500 },
     );
   }
@@ -78,7 +89,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     if (!code || !/^[A-Z0-9]{6}$/.test(code)) {
       return NextResponse.json(
-        { error: 'Invalid referral code' },
+        {
+          meta: { version: '1.0', status: 'error' },
+          error: { code: 'INVALID_CODE', message: 'Invalid referral code' },
+        },
         { status: 400 },
       );
     }
@@ -92,10 +106,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json(
       {
-        code,
-        invited,
-        bonusDays,
-        visitors,
+        meta: { version: '1.0', status: 'success' },
+        data: { code, invited, bonusDays, visitors },
       },
       {
         headers: { 'Cache-Control': 'no-store' },
@@ -104,7 +116,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   } catch (err) {
     console.error('Referral GET error:', err);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      {
+        meta: { version: '1.0', status: 'error' },
+        error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },
+      },
       { status: 500 },
     );
   }

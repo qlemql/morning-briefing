@@ -29,9 +29,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       await trackEvent(event);
     }
 
-    return NextResponse.json({ ok: true }, { status: 200 });
+    return NextResponse.json(
+      { meta: { version: '1.0', status: 'success' }, data: { tracked: true } },
+      { status: 200 },
+    );
   } catch {
-    return NextResponse.json({ ok: false }, { status: 400 });
+    return NextResponse.json(
+      {
+        meta: { version: '1.0', status: 'error' },
+        error: { code: 'TRACKING_FAILED', message: 'Failed to track event' },
+      },
+      { status: 400 },
+    );
   }
 }
 
@@ -41,7 +50,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const secret = request.nextUrl.searchParams.get('secret');
   if (secret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json(
+      {
+        meta: { version: '1.0', status: 'error' },
+        error: { code: 'UNAUTHORIZED', message: 'Unauthorized' },
+      },
+      { status: 401 },
+    );
   }
 
   const date = request.nextUrl.searchParams.get('date') || undefined;
@@ -53,5 +68,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     ? stats
     : { today: stats, history: await getAllStats(), budget };
 
-  return NextResponse.json({ data }, { status: 200 });
+  return NextResponse.json(
+    { meta: { version: '1.0', status: 'success' }, data },
+    { status: 200 },
+  );
 }

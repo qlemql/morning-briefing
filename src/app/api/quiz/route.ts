@@ -31,14 +31,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Validate
     if (!date || !questionId || optionIndex == null) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        {
+          meta: { version: '1.0', status: 'error' },
+          error: { code: 'MISSING_FIELDS', message: 'Missing required fields' },
+        },
         { status: 400 },
       );
     }
 
     if (typeof optionIndex !== 'number' || optionIndex < 0 || optionIndex > 3) {
       return NextResponse.json(
-        { error: 'Invalid optionIndex' },
+        {
+          meta: { version: '1.0', status: 'error' },
+          error: { code: 'INVALID_OPTION', message: 'Invalid optionIndex' },
+        },
         { status: 400 },
       );
     }
@@ -46,7 +52,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Date format validation (YYYY-MM-DD)
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return NextResponse.json(
-        { error: 'Invalid date format' },
+        {
+          meta: { version: '1.0', status: 'error' },
+          error: { code: 'INVALID_DATE', message: 'Invalid date format' },
+        },
         { status: 400 },
       );
     }
@@ -61,7 +70,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       // Already submitted — still return current results
       const quizKey = `${QUIZ_KEY_PREFIX}${date}:${questionId}`;
       const results = await kvHgetall(quizKey);
-      return NextResponse.json({ error: 'Already submitted', results }, { status: 409 });
+      return NextResponse.json(
+        {
+          meta: { version: '1.0', status: 'error' },
+          error: { code: 'DUPLICATE', message: 'Already submitted' },
+          data: { results },
+        },
+        { status: 409 },
+      );
     }
 
     // Set TTL on rate limit key
@@ -75,11 +91,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Return updated results
     const results = await kvHgetall(quizKey);
 
-    return NextResponse.json({ ok: true, results });
+    return NextResponse.json({
+      meta: { version: '1.0', status: 'success' },
+      data: { results },
+    });
   } catch (err) {
     console.error('[quiz] POST error:', err);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      {
+        meta: { version: '1.0', status: 'error' },
+        error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },
+      },
       { status: 500 },
     );
   }
@@ -93,7 +115,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     if (!date || !questionId) {
       return NextResponse.json(
-        { error: 'Missing date or questionId' },
+        {
+          meta: { version: '1.0', status: 'error' },
+          error: { code: 'MISSING_PARAMS', message: 'Missing date or questionId' },
+        },
         { status: 400 },
       );
     }
@@ -102,7 +127,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const results = await kvHgetall(quizKey);
 
     return NextResponse.json(
-      { results },
+      {
+        meta: { version: '1.0', status: 'success' },
+        data: { results },
+      },
       {
         headers: {
           'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
@@ -112,7 +140,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   } catch (err) {
     console.error('[quiz] GET error:', err);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      {
+        meta: { version: '1.0', status: 'error' },
+        error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },
+      },
       { status: 500 },
     );
   }

@@ -73,7 +73,7 @@ function QuizCard({ quiz, date }: { quiz: Quiz; date: string }) {
       // Fetch results
       fetch(`/api/quiz?date=${date}&questionId=${quiz.id}`)
         .then((r) => r.json())
-        .then((d) => setResults(parseResults(d.results, quiz.options.length)))
+        .then((d) => setResults(parseResults(d.data?.results ?? d.results, quiz.options.length)))
         .catch(() => {});
     }
   }, [date, quiz.id, quiz.options.length]);
@@ -91,8 +91,8 @@ function QuizCard({ quiz, date }: { quiz: Quiz; date: string }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ date, questionId: quiz.id, optionIndex: idx }),
         });
-        const data = await res.json();
-        setResults(parseResults(data.results, quiz.options.length));
+        const json = await res.json();
+        setResults(parseResults(json.data?.results ?? json.results, quiz.options.length));
         storeAnswer(date, quiz.id, idx);
         track('quiz_answer', { questionId: quiz.id, correct: String(idx === quiz.answer) });
       } catch {
@@ -215,7 +215,7 @@ function PollCard({ poll, date }: { poll: Poll; date: string }) {
       setSelected(stored.optionIndex);
       fetch(`/api/quiz?date=${date}&questionId=${poll.id}`)
         .then((r) => r.json())
-        .then((d) => setResults(parseResults(d.results, 2)))
+        .then((d) => setResults(parseResults(d.data?.results ?? d.results, 2)))
         .catch(() => {});
     }
   }, [date, poll.id]);
@@ -233,8 +233,8 @@ function PollCard({ poll, date }: { poll: Poll; date: string }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ date, questionId: poll.id, optionIndex: idx }),
         });
-        const data = await res.json();
-        setResults(parseResults(data.results, 2));
+        const json = await res.json();
+        setResults(parseResults(json.data?.results ?? json.results, 2));
         storeAnswer(date, poll.id, idx);
         track('poll_vote', { questionId: poll.id, option: String(idx) });
       } catch {

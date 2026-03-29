@@ -174,10 +174,11 @@ export async function fetchReferralStats(code: string): Promise<{
   try {
     const res = await fetch(`/api/referral?code=${encodeURIComponent(code)}`);
     if (!res.ok) return { invited: 0, bonusDays: 0 };
-    const data = await res.json();
+    const json = await res.json();
+    const d = json.data ?? json;
     return {
-      invited: data.invited ?? 0,
-      bonusDays: data.bonusDays ?? 0,
+      invited: d.invited ?? 0,
+      bonusDays: d.bonusDays ?? 0,
     };
   } catch {
     return { invited: 0, bonusDays: 0 };

@@ -80,7 +80,10 @@ export async function GET(): Promise<NextResponse> {
     // Check in-memory cache first
     if (memoryCache && Date.now() - memoryCache.timestamp < CACHE_TTL_MS) {
       return NextResponse.json(
-        { data: memoryCache.data, cached: true },
+        {
+          meta: { version: '1.0', status: 'success', cached: true },
+          data: memoryCache.data,
+        },
         {
           status: 200,
           headers: {
@@ -96,7 +99,10 @@ export async function GET(): Promise<NextResponse> {
     memoryCache = { data, timestamp: Date.now() };
 
     return NextResponse.json(
-      { data, cached: false },
+      {
+        meta: { version: '1.0', status: 'success', cached: false },
+        data,
+      },
       {
         status: 200,
         headers: {
@@ -108,7 +114,10 @@ export async function GET(): Promise<NextResponse> {
     // If we have stale cache, serve it on error
     if (memoryCache) {
       return NextResponse.json(
-        { data: memoryCache.data, cached: true, stale: true },
+        {
+          meta: { version: '1.0', status: 'success', cached: true, stale: true },
+          data: memoryCache.data,
+        },
         {
           status: 200,
           headers: {
@@ -120,7 +129,10 @@ export async function GET(): Promise<NextResponse> {
 
     console.error('[market] fetch failed:', err);
     return NextResponse.json(
-      { error: 'Failed to fetch market data' },
+      {
+        meta: { version: '1.0', status: 'error' },
+        error: { code: 'FETCH_FAILED', message: 'Failed to fetch market data' },
+      },
       { status: 502 },
     );
   }

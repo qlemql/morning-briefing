@@ -128,7 +128,7 @@ function PaywallContent({
             onClick={handleDonationClick}
             className="w-full rounded-xl bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 py-3.5 font-semibold text-base hover:bg-gray-800 dark:hover:bg-gray-200 transition mb-2"
           >
-            프리미엄 시작하기
+            커피 한 잔으로 오늘 전체 보기
           </button>
 
           <p className="text-center text-xs text-gray-400 dark:text-gray-500 mb-3">
@@ -139,7 +139,7 @@ function PaywallContent({
             onClick={onClose}
             className="w-full text-center text-sm text-gray-400 dark:text-gray-500 py-2 hover:text-gray-600 dark:hover:text-gray-300 transition"
           >
-            1번 카드만 볼게요
+            괜찮아요, 무료로 볼게요
           </button>
 
           {/* [HIDDEN] 구독 안내 링크 — 결제 시스템 준비 전까지 숨김 */}

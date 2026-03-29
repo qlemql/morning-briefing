@@ -92,7 +92,7 @@ export default function Home() {
     if (!inTrial && !subscribed) {
       fetch('/api/unlock')
         .then((r) => r.json())
-        .then((d) => { if (d.unlocked) setIsPremiumUnlocked(true); })
+        .then((d) => { if (d.data?.unlocked) setIsPremiumUnlocked(true); })
         .catch(() => {});
     }
 
@@ -209,7 +209,7 @@ export default function Home() {
       if (!response.ok || data.meta.status === 'error') {
         const code = data.error?.code || 'UNKNOWN';
         if (code === 'INVALID_API_KEY') {
-          setError({ message: 'API 키를 확인해주세요.', type: 'auth' });
+          setError({ message: '서비스에 일시적인 문제가 있어요. 잠시 후 다시 시도해주세요.', type: 'auth' });
         } else if (code === 'RATE_LIMITED') {
           setError({ message: '잠시 후 다시 시도해주세요.', type: 'rate' });
         } else if (code === 'BUDGET_EXCEEDED' || data.error?.message?.includes('budget')) {
@@ -295,7 +295,7 @@ export default function Home() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">아침 브리핑</h1>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-2">
-                <span>{getTodayLabel()} · {new Date().getHours() < 12 ? '좋은 아침이에요' : new Date().getHours() < 18 ? '좋은 오후예요' : '좋은 저녁이에요'}</span>
+                <span>{getTodayLabel()} · {new Date().getHours() < 12 ? '좋은 아침이에요' : new Date().getHours() < 18 ? '좋은 오후에요' : '좋은 저녁이에요'}</span>
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -383,7 +383,7 @@ export default function Home() {
             <CardSkeleton delay={200} />
             {slowLoading && (
               <p className="text-center text-xs text-gray-400 pt-2 animate-fade-slide-up">
-                AI가 최신 뉴스를 검색하고 있어요... 잠시만 기다려주세요
+                AI가 오늘의 뉴스를 분석하고 있어요. 곧 완료됩니다!
               </p>
             )}
           </>
@@ -479,10 +479,10 @@ export default function Home() {
               const m = gen.getMinutes();
               const timeStr = `${h < 10 ? '0' : ''}${h}:${m < 10 ? '0' : ''}${m}`;
 
-              if (diffMin < 1) return `방금 생성됨`;
-              if (diffMin < 60) return `${diffMin}분 전 생성 (${timeStr})`;
-              if (diffMin < 1440) return `${Math.floor(diffMin / 60)}시간 전 생성 (${timeStr})`;
-              return `${timeStr} 생성`;
+              if (diffMin < 1) return `방금 업데이트됨`;
+              if (diffMin < 60) return `${diffMin}분 전 업데이트 (${timeStr})`;
+              if (diffMin < 1440) return `${Math.floor(diffMin / 60)}시간 전 업데이트 (${timeStr})`;
+              return `${timeStr} 업데이트`;
             })()}
             {' · '}
             {(() => {

@@ -130,7 +130,7 @@ export default function AdminPage() {
       }
 
       setAnalytics(analyticsData.data);
-      setSubscribers(subscribersData);
+      setSubscribers(subscribersData.data ?? subscribersData);
       setAuthenticated(true);
       setLastRefresh(new Date().toLocaleTimeString('ko-KR'));
 
