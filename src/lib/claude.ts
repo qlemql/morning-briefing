@@ -134,7 +134,7 @@ interface ClaudeResponse {
 /**
  * 3회 재시도 로직 (5초 간격)
  */
-async function withRetry<T>(fn: () => Promise<T>, retries = 3, delayMs = 5000): Promise<T> {
+async function withRetry<T>(fn: () => Promise<T>, retries = 1, delayMs = 5000): Promise<T> {
   for (let i = 0; i < retries; i++) {
     try {
       return await fn();
@@ -216,7 +216,7 @@ export async function generateBriefing(
   const budget = await canAffordCall();
   if (!budget.allowed) {
     console.warn(
-      `[Claude] Budget exceeded! Calls today: ${budget.callsToday}, Spent: ${budget.spent}¢ / ${budget.budget}¢`,
+      `[Claude] Budget exceeded! Day: ${budget.spentToday.toFixed(2)}¢/${budget.dailyBudget}¢ | Month: ${budget.spentMonth.toFixed(2)}¢/${budget.monthlyBudget}¢`,
     );
     throw new Error('Daily API budget exceeded');
   }
@@ -226,7 +226,7 @@ export async function generateBriefing(
   const message = await withRetry(() =>
     client.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 16000,
+      max_tokens: 4096,
       system: [
         {
           type: 'text' as const,
@@ -371,7 +371,7 @@ export async function generateBriefing(
   });
 
   // Record API call for budget tracking
-  await recordCall();
+  await recordCall({ input_tokens: usage.input_tokens, output_tokens: usage.output_tokens });
 
   return {
     category,

@@ -56,10 +56,11 @@ export async function GET(): Promise<NextResponse> {
   // 5. Budget status
   try {
     const budget = await getBudgetStatus();
-    const remaining = budget.today.budgetCents - budget.today.estimatedCostCents;
+    const remainingDay = budget.today.budgetCents - budget.today.spentCents;
+    const remainingMonth = budget.month.budgetCents - budget.month.spentCents;
     checks.budget = {
-      ok: remaining > 0,
-      detail: `${budget.today.calls} calls today, ~$${(budget.today.estimatedCostCents / 100).toFixed(2)} spent`,
+      ok: remainingDay > 0 && remainingMonth > 0,
+      detail: `Day: $${(budget.today.spentCents / 100).toFixed(2)}/$${(budget.today.budgetCents / 100).toFixed(2)} | Month: $${(budget.month.spentCents / 100).toFixed(2)}/$${(budget.month.budgetCents / 100).toFixed(2)}`,
     };
   } catch {
     checks.budget = { ok: false, detail: 'failed to check' };

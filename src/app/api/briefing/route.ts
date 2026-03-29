@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHmac } from 'crypto';
-import { generateBriefing } from '@/lib/claude';
 import { ServerCache } from '@/lib/server-cache';
 import { ApiResponse, BriefingCategory } from '@/lib/types';
 import { rateLimitBriefing } from '@/lib/rate-limit';
@@ -160,12 +159,8 @@ export async function POST(
     // Use provided date or today (KST)
     const targetDate = date || new Date(Date.now() + 9 * 3600 * 1000).toISOString().split('T')[0];
 
-    // Server-side cache + request deduplication
-    const briefing = await ServerCache.getOrGenerate(
-      category,
-      targetDate,
-      () => generateBriefing(category, targetDate),
-    );
+    // Cache-only lookup (no API generation — generation is cron-only)
+    const briefing = await ServerCache.getOnly(category, targetDate);
 
     // Check HMAC-signed unlock token
     const unlockToken = request.headers.get('x-unlock-token') || '';

@@ -119,6 +119,44 @@ export const ServerCache = {
   },
 
   /**
+   * 캐시 조회 전용 (API 생성 없음)
+   * In-memory → Redis → evergreen fallback 순으로 조회
+   * POST 엔드포인트에서 사용 — 절대 Claude API를 호출하지 않음
+   */
+  async getOnly(
+    category: string,
+    date: string,
+  ): Promise<BriefingCategory> {
+    // 1. In-memory 캐시 확인
+    const cached = this.get(category, date);
+    if (cached) return cached;
+
+    // 2. Redis 캐시 확인
+    if (isRedisConfigured()) {
+      try {
+        const redisKey = `mb:briefing:${category}:${date}`;
+        const redisData = await kvGet(redisKey);
+        if (redisData) {
+          const parsed = JSON.parse(redisData) as BriefingCategory;
+          this.set(category, date, parsed); // in-memory에도 캐싱
+          console.log(`[Cache] ${category} ${date} — Redis hit (getOnly)`);
+          return parsed;
+        }
+      } catch (err) {
+        console.warn('[Cache] Redis read failed (getOnly):', err);
+      }
+    }
+
+    // 3. 캐시 미스 — evergreen fallback 반환 (API 호출 없음)
+    console.warn(`[Cache] ${category} ${date} — cache miss, returning evergreen fallback`);
+    const fallback = getEvergreenBriefing(category, date);
+    if (fallback) return fallback;
+
+    // evergreen도 없는 경우 (있을 수 없지만 안전장치)
+    throw new Error(`No cached briefing and no evergreen fallback for ${category}`);
+  },
+
+  /**
    * 캐시 상태 조회 (디버깅용)
    */
   getStats() {

@@ -264,15 +264,6 @@ export default function Home() {
   useEffect(() => {
     loadBriefing(activeCategory);
     track('page_view', { category: activeCategory });
-
-    // Preload adjacent categories after a short delay
-    const categoryIds = CATEGORIES.map((c) => c.id as string);
-    const idx = categoryIds.indexOf(activeCategory);
-    const adjacent = [categoryIds[idx - 1], categoryIds[idx + 1]].filter(Boolean);
-    const preloadTimer = setTimeout(() => {
-      adjacent.forEach((cat) => { if (cat) loadBriefing(cat); });
-    }, 2000);
-    return () => clearTimeout(preloadTimer);
   }, [activeCategory, loadBriefing]);
 
   return (

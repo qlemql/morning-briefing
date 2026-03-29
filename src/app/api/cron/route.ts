@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateBriefing } from '@/lib/claude';
 import { ServerCache } from '@/lib/server-cache';
+import { canAffordCall } from '@/lib/budget';
 
 export const maxDuration = 60;
 
@@ -21,8 +22,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const results: Record<string, string> = {};
   const startTime = Date.now();
 
-  // Generate both categories in parallel for speed
-  const promises = categories.map(async (category) => {
+  // Generate categories sequentially to control budget spend
+  for (const category of categories) {
+    // Pre-check budget before each generation
+    const budget = await canAffordCall();
+    if (!budget.allowed) {
+      results[category] = `SKIP: budget exceeded (spent ${budget.spent}c / ${budget.budget}c, ${budget.callsToday} calls)`;
+      console.warn(`[Cron] ${category} skipped — budget exceeded (${budget.spent}c / ${budget.budget}c)`);
+      continue;
+    }
+
     try {
       const briefing = await ServerCache.getOrGenerate(
         category,
@@ -35,12 +44,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       results[category] = `FAIL: ${message}`;
       console.error(`[Cron] ${category} failed:`, error);
 
-      // Don't retry if budget exceeded
+      // Retry once on failure (but not if budget exceeded)
       if (message.includes('budget')) {
         results[category] = `SKIP: budget exceeded`;
         console.warn(`[Cron] ${category} skipped — budget exceeded`);
       } else {
-        // Retry once on failure
         try {
           console.log(`[Cron] Retrying ${category}...`);
           const briefing = await generateBriefing(category, today);
@@ -53,9 +61,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         }
       }
     }
-  });
-
-  await Promise.all(promises);
+  }
 
   const elapsed = Date.now() - startTime;
   const failCount = Object.values(results).filter((r) => r.startsWith('FAIL')).length;
