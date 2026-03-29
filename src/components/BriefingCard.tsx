@@ -128,6 +128,7 @@ export default memo(function BriefingCard({
   const [showCopied, setShowCopied] = useState(false);
   const [hasRead, setHasRead] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLElement>(null);
   const [contentHeight, setContentHeight] = useState<number | undefined>(undefined);
 
   const ttsText = `${card.title}. ${card.content}`;
@@ -152,11 +153,18 @@ export default memo(function BriefingCard({
 
   const toggleExpand = useCallback(() => {
     hapticLight();
+    const willExpand = !expanded;
     setExpanded((prev) => {
       if (!prev) setHasRead(true);  // Mark as read when first expanded
       return !prev;
     });
-    track('card_toggle', { card: card.id, expanded: String(!expanded) });
+    // 확장 시 카드가 viewport에 보이도록 스크롤
+    if (willExpand && cardRef.current) {
+      setTimeout(() => {
+        cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 320); // transition 완료 후 스크롤
+    }
+    track('card_toggle', { card: card.id, expanded: String(willExpand) });
   }, [card.id, expanded]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -186,6 +194,7 @@ export default memo(function BriefingCard({
   if (isHeroCard) {
     return (
       <article
+        ref={cardRef}
         className={`relative rounded-2xl overflow-hidden shadow-lg transition-all duration-400 ease-out ${
           entered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
         }`}
@@ -310,6 +319,7 @@ export default memo(function BriefingCard({
   // Cards 2-3 — clean white with accent border
   return (
     <article
+      ref={cardRef}
       className={`relative rounded-2xl bg-white dark:bg-[#1c1c1e] overflow-hidden shadow-sm transition-all duration-400 ease-out ${
         entered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
       } ${shouldBlur ? '' : 'border border-gray-100 dark:border-gray-800'}`}

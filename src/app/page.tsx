@@ -425,16 +425,25 @@ export default function Home() {
 
         {/* [COMING SOON] Daily Quiz & Poll */}
         {briefing && !loading && (
-          <div className="rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-[#1c1c1e]/50 p-5 text-center">
-            <span className="text-xs font-semibold text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2.5 py-1 rounded-full">
-              Coming Soon
+          <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-[#1c1c1e]/50 px-4 py-3 flex items-center gap-3">
+            <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-400 dark:text-indigo-400" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                오늘의 경제 퀴즈
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                곧 만나요
+              </p>
+            </div>
+            <span className="flex-shrink-0 text-[10px] font-semibold text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">
+              SOON
             </span>
-            <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mt-3">
-              오늘의 경제 퀴즈
-            </p>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-              곧 퀴즈로 경제 지식을 테스트해보세요
-            </p>
           </div>
         )}
 
@@ -465,9 +474,14 @@ export default function Home() {
         )}
 
         {/* Freshness indicator with relative time */}
-        {briefing?.generatedAt && (
+        {briefing && (
           <p className="text-center text-xs text-gray-400 dark:text-gray-500 pt-2">
             {(() => {
+              // 에버그린 콘텐츠: 카드 id가 eg_로 시작하면 시간 대신 라벨 표시
+              const isEvergreen = briefing.cards.some((c) => c.id.startsWith('eg_'));
+              if (isEvergreen) return '인사이트 브리핑';
+
+              if (!briefing.generatedAt) return null;
               const gen = new Date(briefing.generatedAt);
               const now = new Date();
               const diffMs = now.getTime() - gen.getTime();

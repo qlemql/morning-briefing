@@ -197,7 +197,7 @@ export default function AdminPage() {
 
   if (!authenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#111111] p-6">
         <div className="w-full max-w-sm">
           <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 text-center mb-6">관리자 대시보드</h1>
           <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6">
@@ -580,7 +580,7 @@ export default function AdminPage() {
 
 function KPICard({ label, value, icon }: { label: string; value: string | number; icon: string }) {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+    <div className="bg-white dark:bg-[#1c1c1e] rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-4">
       <div className="flex items-center gap-2 mb-1">
         <span className="text-lg">{icon}</span>
         <span className="text-xs text-gray-500 dark:text-gray-400">{label}</span>
