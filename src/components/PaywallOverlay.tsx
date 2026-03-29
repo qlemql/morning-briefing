@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, startTransition } from 'react';
+import Link from 'next/link';
 import { hapticMedium } from '@/lib/haptic';
 import { CacheUtils } from '@/lib/cache';
 
@@ -11,8 +12,10 @@ interface PaywallOverlayProps {
   donationUrl?: string;
 }
 
-const SUBSCRIPTION_PRICE = '3,900';
-const ANNUAL_PRICE = '2,900';
+import { SUBSCRIPTION_PRICE, ANNUAL_SUBSCRIPTION_PRICE } from '@/lib/payment';
+
+const PRICE_DISPLAY = SUBSCRIPTION_PRICE.toLocaleString();
+const ANNUAL_PRICE_DISPLAY = ANNUAL_SUBSCRIPTION_PRICE.toLocaleString();
 
 function PaywallContent({
   onUnlock,
@@ -95,7 +98,7 @@ function PaywallContent({
           <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-5 mb-5">
             <div className="flex items-baseline gap-1 mb-3">
               <span className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-                월 {SUBSCRIPTION_PRICE}원
+                월 {PRICE_DISPLAY}원
               </span>
               <span className="text-sm text-gray-400 dark:text-gray-500">
                 / 커피 한 잔 가격
@@ -118,7 +121,7 @@ function PaywallContent({
             </div>
 
             <p className="text-xs text-gray-400 dark:text-gray-500">
-              연간 결제 시 월 {ANNUAL_PRICE}원 (40% 할인)
+              연간 결제 시 월 {ANNUAL_PRICE_DISPLAY}원 (26% 할인)
             </p>
           </div>
 
@@ -140,6 +143,13 @@ function PaywallContent({
           >
             1번 카드만 볼게요
           </button>
+
+          <Link
+            href="/subscribe"
+            className="block w-full text-center text-xs text-gray-400 dark:text-gray-500 pt-1 pb-1 hover:text-gray-600 dark:hover:text-gray-300 transition"
+          >
+            구독 안내 보기 →
+          </Link>
         </>
       )}
 
