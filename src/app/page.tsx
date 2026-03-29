@@ -19,11 +19,14 @@ const WelcomeToast = lazy(() => import('@/components/WelcomeToast'));
 const UpdateBanner = lazy(() => import('@/components/UpdateBanner'));
 const MarketSnapshot = lazy(() => import('@/components/MarketSnapshot'));
 const WatchlistSection = lazy(() => import('@/components/WatchlistSection'));
+const ReferralCard = lazy(() => import('@/components/ReferralCard'));
+const DailyQuiz = lazy(() => import('@/components/DailyQuiz'));
 import { BriefingCategory } from '@/lib/types';
 import { CacheUtils } from '@/lib/cache';
 import { getTodayLabel, CATEGORIES } from '@/constants';
 import { track } from '@/lib/track';
 import { hapticLight, hapticMedium } from '@/lib/haptic';
+import { registerReferral, isSelfReferral } from '@/lib/referral';
 import { reportWebVitals } from '@/lib/vitals';
 import { VERSION_LABEL } from '@/lib/version';
 
@@ -97,7 +100,20 @@ export default function Home() {
         .catch(() => {});
     }
 
-    // 3) 오래된 캐시 정리
+    // 3) 레퍼럴 코드 처리 (?ref= 파라미터)
+    const refParams = new URLSearchParams(window.location.search);
+    const refCode = refParams.get('ref');
+    if (refCode && /^[A-Z0-9]{6}$/.test(refCode) && !isSelfReferral(refCode)) {
+      registerReferral(refCode).then((ok) => {
+        if (ok) track('referral_registered', { code: refCode });
+      });
+      // Clean up URL (remove ref param)
+      const url = new URL(window.location.href);
+      url.searchParams.delete('ref');
+      window.history.replaceState(null, '', url.pathname + url.search);
+    }
+
+    // 4) 오래된 캐시 정리
     CacheUtils.cleanupOldCache();
     track('page_view', { category: 'economy' });
     reportWebVitals();
@@ -416,6 +432,13 @@ export default function Home() {
           </Suspense>
         )}
 
+        {/* Daily Quiz & Poll — shown after cards load */}
+        {briefing && !loading && (
+          <Suspense fallback={null}>
+            <DailyQuiz />
+          </Suspense>
+        )}
+
         {/* Copy entire briefing summary */}
         {briefing && !loading && (
           <button
@@ -481,21 +504,9 @@ export default function Home() {
             ☕ 마음에 드셨다면 커피 한 잔 사주세요
           </a>
         )}
-        <button
-          onClick={async () => {
-            const text = '아침 브리핑 — AI가 매일 아침 뉴스를 3장 카드로 정리해줘요!\nhttps://morning-briefing-mocha.vercel.app';
-            if (navigator.share) {
-              try { await navigator.share({ title: '아침 브리핑', text }); track('share_app'); } catch { /* cancelled */ }
-            } else if (navigator.clipboard) {
-              await navigator.clipboard.writeText(text);
-              showToast('링크가 복사되었어요!', '✅');
-              track('share_app');
-            }
-          }}
-          className="block w-full text-center rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1c1c1e] text-gray-600 dark:text-gray-300 py-3 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-        >
-          🔗 친구에게 공유하기
-        </button>
+        <Suspense fallback={null}>
+          <ReferralCard />
+        </Suspense>
         <div className="text-center text-xs text-gray-300 dark:text-gray-600 mt-4 space-y-1">
           <p>© 2026 아침 브리핑 · AI가 매일 아침 정리하는 뉴스</p>
           <p>

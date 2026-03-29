@@ -6,6 +6,7 @@ import { CARD_TYPE_LABELS, getCategoryById } from '@/constants';
 import { track } from '@/lib/track';
 import { hapticLight } from '@/lib/haptic';
 import { showToast } from '@/components/Toast';
+import * as tts from '@/lib/tts';
 
 interface BriefingCardProps {
   card: BriefingCardType;
@@ -29,6 +30,71 @@ const ChevronIcon = ({ className }: { className?: string }) => (
     <polyline points="2 4 6 8 10 4" />
   </svg>
 );
+
+const PlayIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M8 5v14l11-7z" />
+  </svg>
+);
+
+const PauseIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <rect x="6" y="4" width="4" height="16" />
+    <rect x="14" y="4" width="4" height="16" />
+  </svg>
+);
+
+const StopIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <rect x="4" y="4" width="16" height="16" rx="2" />
+  </svg>
+);
+
+type TtsState = 'idle' | 'playing' | 'paused';
+
+function useTts(text: string, cardId: string) {
+  const [state, setState] = useState<TtsState>('idle');
+  const [supported, setSupported] = useState(false);
+
+  useEffect(() => {
+    setSupported(tts.isSupported());
+  }, []);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      if (tts.isSpeaking()) tts.stop();
+    };
+  }, []);
+
+  const handleTts = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    hapticLight();
+
+    if (state === 'playing') {
+      tts.pause();
+      setState('paused');
+      track('tts_pause', { card: cardId });
+    } else if (state === 'paused') {
+      tts.resume();
+      setState('playing');
+      track('tts_resume', { card: cardId });
+    } else {
+      tts.speak(text, () => setState('idle'));
+      setState('playing');
+      track('tts_play', { card: cardId });
+    }
+  }, [state, text, cardId]);
+
+  const handleStop = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    tts.stop();
+    setState('idle');
+    track('tts_stop', { card: cardId });
+  }, [cardId]);
+
+  return { state, supported, handleTts, handleStop };
+}
 
 async function shareCard(card: BriefingCardType, categoryName?: string): Promise<boolean> {
   const categoryTag = categoryName ? ` #${categoryName}` : '';
@@ -63,6 +129,9 @@ export default memo(function BriefingCard({
   const [hasRead, setHasRead] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const [contentHeight, setContentHeight] = useState<number | undefined>(undefined);
+
+  const ttsText = `${card.title}. ${card.content}`;
+  const { state: ttsState, supported: ttsSupported, handleTts, handleStop } = useTts(ttsText, card.id);
 
   const shouldBlur = isPaywalled && !isPremiumUnlocked;
   const category = getCategoryById(categoryId);
@@ -192,20 +261,43 @@ export default memo(function BriefingCard({
                       ) : card.source}
                     </p>
                   )}
-                  <button
-                    onClick={handleShare}
-                    className="text-xs text-white/40 hover:text-white/70 transition-colors flex items-center gap-1"
-                    aria-label={`${card.title} 공유하기`}
-                  >
-                    {showCopied ? (
-                      <span className="text-emerald-400">복사됨!</span>
-                    ) : (
-                      <>
-                        <ShareIcon />
-                        공유
-                      </>
+                  <div className="flex items-center gap-3">
+                    {ttsSupported && (
+                      <span className="flex items-center gap-1">
+                        <button
+                          onClick={handleTts}
+                          className="text-xs text-white/40 hover:text-white/70 transition-colors flex items-center gap-1"
+                          aria-label={ttsState === 'playing' ? '일시정지' : ttsState === 'paused' ? '계속 듣기' : `${card.title} 듣기`}
+                        >
+                          {ttsState === 'playing' ? <PauseIcon /> : <PlayIcon />}
+                          {ttsState === 'idle' ? '듣기' : ttsState === 'playing' ? '일시정지' : '계속'}
+                        </button>
+                        {ttsState !== 'idle' && (
+                          <button
+                            onClick={handleStop}
+                            className="text-xs text-white/40 hover:text-white/70 transition-colors"
+                            aria-label="정지"
+                          >
+                            <StopIcon />
+                          </button>
+                        )}
+                      </span>
                     )}
-                  </button>
+                    <button
+                      onClick={handleShare}
+                      className="text-xs text-white/40 hover:text-white/70 transition-colors flex items-center gap-1"
+                      aria-label={`${card.title} 공유하기`}
+                    >
+                      {showCopied ? (
+                        <span className="text-emerald-400">복사됨!</span>
+                      ) : (
+                        <>
+                          <ShareIcon />
+                          공유
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -299,20 +391,43 @@ export default memo(function BriefingCard({
                     ) : card.source}
                   </p>
                 )}
-                <button
-                  onClick={handleShare}
-                  className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex items-center gap-1"
-                  aria-label={`${card.title} 공유하기`}
-                >
-                  {showCopied ? (
-                    <span className="text-emerald-500">복사됨!</span>
-                  ) : (
-                    <>
-                      <ShareIcon />
-                      공유
-                    </>
+                <div className="flex items-center gap-3">
+                  {ttsSupported && (
+                    <span className="flex items-center gap-1">
+                      <button
+                        onClick={handleTts}
+                        className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex items-center gap-1"
+                        aria-label={ttsState === 'playing' ? '일시정지' : ttsState === 'paused' ? '계속 듣기' : `${card.title} 듣기`}
+                      >
+                        {ttsState === 'playing' ? <PauseIcon /> : <PlayIcon />}
+                        {ttsState === 'idle' ? '듣기' : ttsState === 'playing' ? '일시정지' : '계속'}
+                      </button>
+                      {ttsState !== 'idle' && (
+                        <button
+                          onClick={handleStop}
+                          className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                          aria-label="정지"
+                        >
+                          <StopIcon />
+                        </button>
+                      )}
+                    </span>
                   )}
-                </button>
+                  <button
+                    onClick={handleShare}
+                    className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex items-center gap-1"
+                    aria-label={`${card.title} 공유하기`}
+                  >
+                    {showCopied ? (
+                      <span className="text-emerald-500">복사됨!</span>
+                    ) : (
+                      <>
+                        <ShareIcon />
+                        공유
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
