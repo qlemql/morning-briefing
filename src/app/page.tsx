@@ -5,35 +5,24 @@ import CategoryTab from '@/components/CategoryTab';
 import BriefingCard from '@/components/BriefingCard';
 import CardSkeleton from '@/components/CardSkeleton';
 import PullToRefresh from '@/components/PullToRefresh';
-// [HIDDEN] StreakBadge — 3일 연속 방문자가 생기기 전까지 표시되지 않으므로 제거
-// import StreakBadge from '@/components/StreakBadge';
 import ThemeToggle from '@/components/ThemeToggle';
 import TrialBanner from '@/components/TrialBanner';
 import ToastContainer, { showToast } from '@/components/Toast';
 
 // Lazy-load non-critical overlays (not needed for initial render)
 const PaywallOverlay = lazy(() => import('@/components/PaywallOverlay'));
-// [HIDDEN] NotificationPrompt — 푸시 알림 서버(VAPID) 미구현, 유저 0명 단계에서 불필요
-// const NotificationPrompt = lazy(() => import('@/components/NotificationPrompt'));
-// [HIDDEN] EmailCollector — 뉴스레터 발송 시스템 미구현, 런칭 후 활성화
-// const EmailCollector = lazy(() => import('@/components/EmailCollector'));
 const InstallPrompt = lazy(() => import('@/components/InstallPrompt'));
 const WelcomeToast = lazy(() => import('@/components/WelcomeToast'));
 const UpdateBanner = lazy(() => import('@/components/UpdateBanner'));
 const MarketSnapshot = lazy(() => import('@/components/MarketSnapshot'));
-// [HIDDEN] WatchlistSection — 핵심 경험(브리핑)과 거리 먼 증권앱 기능, 유저 확보 후 활성화
-// const WatchlistSection = lazy(() => import('@/components/WatchlistSection'));
-// [HIDDEN] ReferralCard — 유저 0명 단계에서 레퍼럴은 무의미
-// const ReferralCard = lazy(() => import('@/components/ReferralCard'));
-// [COMING SOON] DailyQuiz — 커밍쑨 카드로 대체
-// const DailyQuiz = lazy(() => import('@/components/DailyQuiz'));
+// [HIDDEN] 아래 컴포넌트들은 유저 확보 후 활성화 예정
+// NotificationPrompt, EmailCollector, WatchlistSection, ReferralCard, DailyQuiz
+
 import { BriefingCategory } from '@/lib/types';
 import { CacheUtils } from '@/lib/cache';
 import { getTodayLabel, CATEGORIES } from '@/constants';
 import { track } from '@/lib/track';
 import { hapticLight, hapticMedium } from '@/lib/haptic';
-// [HIDDEN] referral — 유저 0명 단계에서 비활성화
-// import { registerReferral, isSelfReferral } from '@/lib/referral';
 import { reportWebVitals } from '@/lib/vitals';
 import { VERSION_LABEL } from '@/lib/version';
 

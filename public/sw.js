@@ -1,6 +1,7 @@
-const CACHE_NAME = 'morning-briefing-v7';
+const CACHE_NAME = 'morning-briefing-v8';
 const STATIC_ASSETS = [
   '/',
+  '/privacy',
   '/manifest.json',
   '/offline.html',
 ];
