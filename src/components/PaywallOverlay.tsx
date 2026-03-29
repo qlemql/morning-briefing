@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, startTransition } from 'react';
-import Link from 'next/link';
+// [HIDDEN] Link — 구독 페이지 링크 숨김에 따라 미사용
+// import Link from 'next/link';
 import { hapticMedium } from '@/lib/haptic';
 import { CacheUtils } from '@/lib/cache';
 
@@ -12,10 +13,9 @@ interface PaywallOverlayProps {
   donationUrl?: string;
 }
 
-import { SUBSCRIPTION_PRICE, ANNUAL_SUBSCRIPTION_PRICE } from '@/lib/payment';
+import { SUBSCRIPTION_PRICE } from '@/lib/payment';
 
 const PRICE_DISPLAY = SUBSCRIPTION_PRICE.toLocaleString();
-const ANNUAL_PRICE_DISPLAY = ANNUAL_SUBSCRIPTION_PRICE.toLocaleString();
 
 function PaywallContent({
   onUnlock,
@@ -120,9 +120,7 @@ function PaywallContent({
               </div>
             </div>
 
-            <p className="text-xs text-gray-400 dark:text-gray-500">
-              연간 결제 시 월 {ANNUAL_PRICE_DISPLAY}원 (26% 할인)
-            </p>
+            {/* [HIDDEN] 연간 결제 옵션 — 결제 시스템 준비 전까지 숨김 */}
           </div>
 
           {/* CTA — currently donation-based until payment integration */}
@@ -144,12 +142,7 @@ function PaywallContent({
             1번 카드만 볼게요
           </button>
 
-          <Link
-            href="/subscribe"
-            className="block w-full text-center text-xs text-gray-400 dark:text-gray-500 pt-1 pb-1 hover:text-gray-600 dark:hover:text-gray-300 transition"
-          >
-            구독 안내 보기 →
-          </Link>
+          {/* [HIDDEN] 구독 안내 링크 — 결제 시스템 준비 전까지 숨김 */}
         </>
       )}
 

@@ -20,6 +20,7 @@ export function getWatchlist(): string[] {
 }
 
 export function addToWatchlist(ticker: string): boolean {
+  if (typeof window === 'undefined') return false;
   const list = getWatchlist();
   if (list.length >= MAX_ITEMS) return false;
   if (list.includes(ticker)) return false;
@@ -29,6 +30,7 @@ export function addToWatchlist(ticker: string): boolean {
 }
 
 export function removeFromWatchlist(ticker: string): void {
+  if (typeof window === 'undefined') return;
   const list = getWatchlist().filter((t) => t !== ticker);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
 }

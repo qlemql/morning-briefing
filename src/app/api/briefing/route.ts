@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createHmac } from 'crypto';
+import { createHmac, createHash } from 'crypto';
 import { ServerCache } from '@/lib/server-cache';
 import { ApiResponse, BriefingCategory } from '@/lib/types';
 import { rateLimitBriefing } from '@/lib/rate-limit';
+import { isUnlocked as checkUserUnlocked } from '@/lib/user';
 import { kvGet } from '@/lib/kv';
 
 export const maxDuration = 60;
@@ -274,6 +275,25 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const action = request.nextUrl.searchParams.get('action');
 
   if (action === 'unlock') {
+    // Verify user is actually unlocked (Redis) before issuing HMAC tokens
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const ua = request.headers.get('user-agent') || '';
+    const userId = createHash('sha256')
+      .update(`${ip.split(',')[0].trim()}_${ua}`)
+      .digest('hex')
+      .substring(0, 16);
+
+    const userUnlocked = await checkUserUnlocked(userId);
+    if (!userUnlocked) {
+      return NextResponse.json(
+        {
+          meta: { version: '1.0', status: 'error', message: 'Not unlocked' },
+          error: { code: 'NOT_UNLOCKED', message: 'Complete the unlock flow first' },
+        },
+        { status: 403 },
+      );
+    }
+
     const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().split('T')[0];
     const tokens: Record<string, string> = {};
     for (const cat of ['economy', 'investment', 'lifestyle']) {

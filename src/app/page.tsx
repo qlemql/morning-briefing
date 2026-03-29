@@ -5,28 +5,35 @@ import CategoryTab from '@/components/CategoryTab';
 import BriefingCard from '@/components/BriefingCard';
 import CardSkeleton from '@/components/CardSkeleton';
 import PullToRefresh from '@/components/PullToRefresh';
-import StreakBadge from '@/components/StreakBadge';
+// [HIDDEN] StreakBadge — 3일 연속 방문자가 생기기 전까지 표시되지 않으므로 제거
+// import StreakBadge from '@/components/StreakBadge';
 import ThemeToggle from '@/components/ThemeToggle';
 import TrialBanner from '@/components/TrialBanner';
 import ToastContainer, { showToast } from '@/components/Toast';
 
 // Lazy-load non-critical overlays (not needed for initial render)
 const PaywallOverlay = lazy(() => import('@/components/PaywallOverlay'));
-const NotificationPrompt = lazy(() => import('@/components/NotificationPrompt'));
-const EmailCollector = lazy(() => import('@/components/EmailCollector'));
+// [HIDDEN] NotificationPrompt — 푸시 알림 서버(VAPID) 미구현, 유저 0명 단계에서 불필요
+// const NotificationPrompt = lazy(() => import('@/components/NotificationPrompt'));
+// [HIDDEN] EmailCollector — 뉴스레터 발송 시스템 미구현, 런칭 후 활성화
+// const EmailCollector = lazy(() => import('@/components/EmailCollector'));
 const InstallPrompt = lazy(() => import('@/components/InstallPrompt'));
 const WelcomeToast = lazy(() => import('@/components/WelcomeToast'));
 const UpdateBanner = lazy(() => import('@/components/UpdateBanner'));
 const MarketSnapshot = lazy(() => import('@/components/MarketSnapshot'));
-const WatchlistSection = lazy(() => import('@/components/WatchlistSection'));
-const ReferralCard = lazy(() => import('@/components/ReferralCard'));
-const DailyQuiz = lazy(() => import('@/components/DailyQuiz'));
+// [HIDDEN] WatchlistSection — 핵심 경험(브리핑)과 거리 먼 증권앱 기능, 유저 확보 후 활성화
+// const WatchlistSection = lazy(() => import('@/components/WatchlistSection'));
+// [HIDDEN] ReferralCard — 유저 0명 단계에서 레퍼럴은 무의미
+// const ReferralCard = lazy(() => import('@/components/ReferralCard'));
+// [COMING SOON] DailyQuiz — 커밍쑨 카드로 대체
+// const DailyQuiz = lazy(() => import('@/components/DailyQuiz'));
 import { BriefingCategory } from '@/lib/types';
 import { CacheUtils } from '@/lib/cache';
 import { getTodayLabel, CATEGORIES } from '@/constants';
 import { track } from '@/lib/track';
 import { hapticLight, hapticMedium } from '@/lib/haptic';
-import { registerReferral, isSelfReferral } from '@/lib/referral';
+// [HIDDEN] referral — 유저 0명 단계에서 비활성화
+// import { registerReferral, isSelfReferral } from '@/lib/referral';
 import { reportWebVitals } from '@/lib/vitals';
 import { VERSION_LABEL } from '@/lib/version';
 
@@ -100,18 +107,8 @@ export default function Home() {
         .catch(() => {});
     }
 
-    // 3) 레퍼럴 코드 처리 (?ref= 파라미터)
-    const refParams = new URLSearchParams(window.location.search);
-    const refCode = refParams.get('ref');
-    if (refCode && /^[A-Z0-9]{6}$/.test(refCode) && !isSelfReferral(refCode)) {
-      registerReferral(refCode).then((ok) => {
-        if (ok) track('referral_registered', { code: refCode });
-      });
-      // Clean up URL (remove ref param)
-      const url = new URL(window.location.href);
-      url.searchParams.delete('ref');
-      window.history.replaceState(null, '', url.pathname + url.search);
-    }
+    // [HIDDEN] 레퍼럴 코드 처리 — 유저 0명 단계에서 비활성화
+    // 레퍼럴 시스템 활성화 시 registerReferral, isSelfReferral import 복원 필요
 
     // 4) 오래된 캐시 정리
     CacheUtils.cleanupOldCache();
@@ -310,7 +307,6 @@ export default function Home() {
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">아침 브리핑</h1>
               <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-2">
                 <span>{getTodayLabel()} · {new Date().getHours() < 12 ? '좋은 아침이에요' : new Date().getHours() < 18 ? '좋은 오후예요' : '좋은 저녁이에요'}</span>
-                <StreakBadge />
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -425,18 +421,21 @@ export default function Home() {
           </div>
         ) : null}
 
-        {/* Watchlist — investment tab only */}
-        {activeCategory === 'investment' && (
-          <Suspense fallback={null}>
-            <WatchlistSection />
-          </Suspense>
-        )}
+        {/* [HIDDEN] Watchlist — 핵심 경험과 거리 먼 기능, 유저 확보 후 활성화 */}
 
-        {/* Daily Quiz & Poll — shown after cards load */}
+        {/* [COMING SOON] Daily Quiz & Poll */}
         {briefing && !loading && (
-          <Suspense fallback={null}>
-            <DailyQuiz />
-          </Suspense>
+          <div className="rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-[#1c1c1e]/50 p-5 text-center">
+            <span className="text-xs font-semibold text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2.5 py-1 rounded-full">
+              Coming Soon
+            </span>
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mt-3">
+              오늘의 경제 퀴즈
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              곧 퀴즈로 경제 지식을 테스트해보세요
+            </p>
+          </div>
         )}
 
         {/* Copy entire briefing summary */}
@@ -504,18 +503,12 @@ export default function Home() {
             ☕ 마음에 드셨다면 커피 한 잔 사주세요
           </a>
         )}
-        <Suspense fallback={null}>
-          <ReferralCard />
-        </Suspense>
+        {/* [HIDDEN] ReferralCard — 유저 0명 단계에서 레퍼럴 무의미 */}
         <div className="text-center text-xs text-gray-300 dark:text-gray-600 mt-4 space-y-1">
           <p>© 2026 아침 브리핑 · AI가 매일 아침 정리하는 뉴스</p>
           <p>
             <a href="mailto:thbabu2@gmail.com" className="hover:text-gray-500 transition-colors">
               문의
-            </a>
-            {' · '}
-            <a href="/subscribe" className="hover:text-gray-500 transition-colors">
-              구독하기
             </a>
             {' · '}
             <a href="/privacy" className="hover:text-gray-500 transition-colors">
@@ -562,13 +555,10 @@ export default function Home() {
         donationUrl={DONATION_URL || undefined}
       />
 
-      {/* Notification subscription prompt */}
-      <NotificationPrompt />
+      {/* [HIDDEN] NotificationPrompt — VAPID 미구현, 유저 0명 */}
+      {/* [HIDDEN] EmailCollector — 뉴스레터 발송 미구현 */}
 
-      {/* Email newsletter collection */}
-      <EmailCollector />
-
-      {/* PWA install prompt */}
+      {/* PWA install prompt — 리텐션에 유용하므로 유지 */}
       <InstallPrompt />
       </Suspense>
     </div>
