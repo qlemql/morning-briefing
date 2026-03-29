@@ -18,6 +18,7 @@ const InstallPrompt = lazy(() => import('@/components/InstallPrompt'));
 const WelcomeToast = lazy(() => import('@/components/WelcomeToast'));
 const UpdateBanner = lazy(() => import('@/components/UpdateBanner'));
 const MarketSnapshot = lazy(() => import('@/components/MarketSnapshot'));
+const WatchlistSection = lazy(() => import('@/components/WatchlistSection'));
 import { BriefingCategory } from '@/lib/types';
 import { CacheUtils } from '@/lib/cache';
 import { getTodayLabel, CATEGORIES } from '@/constants';
@@ -407,6 +408,13 @@ export default function Home() {
             )}
           </div>
         ) : null}
+
+        {/* Watchlist — investment tab only */}
+        {activeCategory === 'investment' && (
+          <Suspense fallback={null}>
+            <WatchlistSection />
+          </Suspense>
+        )}
 
         {/* Copy entire briefing summary */}
         {briefing && !loading && (
