@@ -66,7 +66,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
  * GET /api/subscribe — view subscriber list (protected)
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const secret = request.nextUrl.searchParams.get('secret');
+  const secret = request.nextUrl.searchParams.get('secret')
+    || request.headers.get('authorization')?.replace('Bearer ', '') || null;
   if (secret !== process.env.CRON_SECRET) {
     return NextResponse.json(
       {

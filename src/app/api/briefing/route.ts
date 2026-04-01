@@ -47,22 +47,22 @@ async function getEvergreenOrCached(category: string, date: string): Promise<Bri
  * HMAC-SHA256 기반 unlock 토큰 검증
  * 시크릿: CRON_SECRET 환경변수 재활용 (별도 시크릿 불필요)
  */
-function verifyUnlockToken(token: string, date: string, category: string): boolean {
+function verifyUnlockToken(token: string, date: string, category: string, userId: string): boolean {
   const secret = process.env.CRON_SECRET || 'default-dev-secret';
   const expected = createHmac('sha256', secret)
-    .update(`mb_${date}_${category}`)
+    .update(`mb_${date}_${category}_${userId}`)
     .digest('hex')
     .substring(0, 32);
   return token === expected;
 }
 
 /**
- * unlock 토큰 생성 (클라이언트에 전달용)
+ * unlock 토큰 생성 (클라이언트에 전달용, user-bound)
  */
-export function generateUnlockToken(date: string, category: string): string {
+export function generateUnlockToken(date: string, category: string, userId: string): string {
   const secret = process.env.CRON_SECRET || 'default-dev-secret';
   return createHmac('sha256', secret)
-    .update(`mb_${date}_${category}`)
+    .update(`mb_${date}_${category}_${userId}`)
     .digest('hex')
     .substring(0, 32);
 }
@@ -206,9 +206,18 @@ export async function POST(
       ? await ServerCache.getOnly(category, targetDate)
       : await getEvergreenOrCached(category, targetDate);
 
-    // Check HMAC-signed unlock token
+    // Derive userId for token verification and server-side unlock check
+    const ua = request.headers.get('user-agent') || '';
+    const userId = createHash('sha256')
+      .update(`${ip}_${ua}`)
+      .digest('hex')
+      .substring(0, 16);
+
+    // Check HMAC-signed unlock token OR server-side unlock status (trial/donation)
     const unlockToken = request.headers.get('x-unlock-token') || '';
-    const isUnlocked = unlockToken !== '' && verifyUnlockToken(unlockToken, targetDate, category);
+    const isUnlocked =
+      (unlockToken !== '' && verifyUnlockToken(unlockToken, targetDate, category, userId)) ||
+      (await checkUserUnlocked(userId));
 
     // Server-side content gating: strip card 2-3 content for non-unlocked users
     const gatedBriefing = {
@@ -297,7 +306,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().split('T')[0];
     const tokens: Record<string, string> = {};
     for (const cat of ['economy', 'investment', 'lifestyle']) {
-      tokens[cat] = generateUnlockToken(today, cat);
+      tokens[cat] = generateUnlockToken(today, cat, userId);
     }
     return NextResponse.json(
       {

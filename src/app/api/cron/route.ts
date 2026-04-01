@@ -5,7 +5,7 @@ import { canAffordCall } from '@/lib/budget';
 import { formatForAllPlatforms } from '@/lib/sns-formatter';
 import { enqueueSNSPost, isQueueAvailable } from '@/lib/sns-queue';
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 /**
  * GET /api/cron
@@ -51,6 +51,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         results[category] = `SKIP: budget exceeded`;
         console.warn(`[Cron] ${category} skipped — budget exceeded`);
       } else {
+        // Budget check before retry
+        const retryBudget = await canAffordCall();
+        if (!retryBudget.allowed) {
+          results[category] = `SKIP (retry): budget exceeded (${retryBudget.spent}c / ${retryBudget.budget}c)`;
+          console.warn(`[Cron] ${category} retry skipped — budget exceeded`);
+          continue;
+        }
         try {
           console.log(`[Cron] Retrying ${category}...`);
           const briefing = await generateBriefing(category, today);

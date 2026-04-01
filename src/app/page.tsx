@@ -89,12 +89,21 @@ export default function Home() {
 
       // 체험/구독 중이면 서버에 unlock 등록 + HMAC 토큰 발급
       // (서버가 카드 2-3 content를 내려보내려면 토큰이 필요)
+      // 토큰 발급 완료 후 기존 strip된 캐시를 무효화하여 재요청 트리거
       fetch('/api/unlock', { method: 'POST' })
         .then(() => fetch('/api/briefing?action=unlock'))
         .then((r) => r.json())
         .then((d) => {
           const tokens = d.data?.tokens as Record<string, string> | undefined;
-          if (tokens) CacheUtils.setPremiumUnlocked(tokens);
+          if (tokens) {
+            CacheUtils.setPremiumUnlocked(tokens);
+            // 토큰 발급 완료 → 기존 strip된 캐시 무효화 + 재요청
+            const today = CacheUtils.getTodayDate();
+            ['economy', 'investment', 'lifestyle'].forEach((cat) =>
+              CacheUtils.clearBriefing(cat, today),
+            );
+            setBriefings({}); // state 리셋 → useEffect에서 재로드
+          }
         })
         .catch(() => {});
     } else {
@@ -114,13 +123,31 @@ export default function Home() {
     reportWebVitals();
 
     // Auto-refresh when tab becomes visible after midnight (new day)
+    let lastKnownDate = CacheUtils.getTodayDate();
     const handleVisibility = () => {
       if (document.visibilityState !== 'visible') return;
-      const cachedDate = CacheUtils.getTodayDate();
       const now = new Date(Date.now() + 9 * 3600 * 1000).toISOString().split('T')[0];
-      if (cachedDate !== now) {
-        // New day — clear all and reload
+      if (lastKnownDate !== now) {
+        lastKnownDate = now;
+        // New day — clear all and reload + renew tokens
         setBriefings({});
+        if (CacheUtils.isInTrialPeriod() || CacheUtils.isPremiumUnlocked() || CacheUtils.isSubscribed()) {
+          fetch('/api/unlock', { method: 'POST' })
+            .then(() => fetch('/api/briefing?action=unlock'))
+            .then((r) => r.json())
+            .then((d) => {
+              const tokens = d.data?.tokens as Record<string, string> | undefined;
+              if (tokens) {
+                CacheUtils.setPremiumUnlocked(tokens);
+                // 새 토큰으로 재요청 위해 캐시 클리어
+                ['economy', 'investment', 'lifestyle'].forEach((cat) =>
+                  CacheUtils.clearBriefing(cat, now),
+                );
+                setBriefings({});
+              }
+            })
+            .catch(() => {});
+        }
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
@@ -259,9 +286,8 @@ export default function Home() {
       delete next[activeCategory];
       return next;
     });
-    await new Promise((r) => setTimeout(r, 300));
-    await loadBriefing(activeCategory);
-  }, [activeCategory, loadBriefing]);
+    // State reset triggers loadBriefing via useEffect (no manual call needed)
+  }, [activeCategory]);
 
   // Dynamic page title + URL based on category
   useEffect(() => {
