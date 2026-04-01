@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# handoff (contains secrets)
+HANDOFF.md
+
+# Capacitor iOS - Pods managed by CocoaPods
+ios/App/Pods/
