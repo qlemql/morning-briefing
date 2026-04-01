@@ -69,8 +69,8 @@ export default function MarketSnapshot() {
     return () => { cancelled = true; };
   }, []);
 
-  // Graceful hide on failure
-  if (failed) return null;
+  // Hide on failure or while loading (no skeleton flash)
+  if (failed || !items) return null;
 
   return (
     <div className="mb-1">
@@ -79,16 +79,7 @@ export default function MarketSnapshot() {
         className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4"
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
-        {!items ? (
-          // Loading skeleton
-          <>
-            <PillSkeleton />
-            <PillSkeleton />
-            <PillSkeleton />
-            <PillSkeleton />
-          </>
-        ) : (
-          items.map((item) => {
+        {items.map((item) => {
             const isUp = item.change > 0;
             const isDown = item.change < 0;
             const isFlat = item.change === 0;
@@ -124,8 +115,7 @@ export default function MarketSnapshot() {
                 </p>
               </div>
             );
-          })
-        )}
+          })}
       </div>
     </div>
   );

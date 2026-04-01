@@ -86,10 +86,19 @@ export default function Home() {
     const subscribed = CacheUtils.isSubscribed();
     if (inTrial || dailyUnlock || subscribed) {
       setIsPremiumUnlocked(true);
-    }
 
-    // 2) 서버 상태 동기화 (Redis 기반)
-    if (!inTrial && !subscribed) {
+      // 체험/구독 중이면 서버에 unlock 등록 + HMAC 토큰 발급
+      // (서버가 카드 2-3 content를 내려보내려면 토큰이 필요)
+      fetch('/api/unlock', { method: 'POST' })
+        .then(() => fetch('/api/briefing?action=unlock'))
+        .then((r) => r.json())
+        .then((d) => {
+          const tokens = d.data?.tokens as Record<string, string> | undefined;
+          if (tokens) CacheUtils.setPremiumUnlocked(tokens);
+        })
+        .catch(() => {});
+    } else {
+      // 체험 만료 후 — 서버 상태만 확인
       fetch('/api/unlock')
         .then((r) => r.json())
         .then((d) => { if (d.data?.unlocked) setIsPremiumUnlocked(true); })
