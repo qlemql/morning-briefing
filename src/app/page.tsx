@@ -288,6 +288,13 @@ export default function Home() {
         </div>
       )}
 
+      {/* Status bar background cover — prevents scrolled content from showing through */}
+      <div
+        className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-[#1c1c1e]"
+        style={{ height: 'env(safe-area-inset-top, 0px)' }}
+        aria-hidden="true"
+      />
+
       {/* Header — sticky with iOS notch safe area + GPU layer for flicker prevention */}
       <header className="sticky top-0 z-40 bg-white dark:bg-[#1c1c1e] border-b border-gray-200/80 dark:border-gray-800 ios-safe-top will-change-transform" style={{ transform: 'translateZ(0)' }}>
         <div className="mx-auto max-w-lg px-4 pb-3" style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
