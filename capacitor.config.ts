@@ -8,9 +8,22 @@ const config: CapacitorConfig = {
     url: 'https://morning-briefing-mocha.vercel.app',
     cleartext: false,
   },
+  backgroundColor: '#f5f5f7',
   ios: {
-    scheme: '아침브리핑',
+    scheme: 'App',
     contentInset: 'automatic',
+    allowsLinkPreview: false,
+    scrollEnabled: true,
+    backgroundColor: '#f5f5f7',
+    preferredContentMode: 'mobile',
+  },
+  plugins: {
+    SplashScreen: {
+      launchAutoHide: true,
+      launchFadeOutDuration: 300,
+      backgroundColor: '#f5f5f7',
+      showSpinner: false,
+    },
   },
 };
 

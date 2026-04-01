@@ -37,16 +37,58 @@ body {
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  padding-top: env(safe-area-inset-top);
+  /* Safe area bottom padding for home indicator */
   padding-bottom: env(safe-area-inset-bottom);
+  /* Prevent iOS rubber-band overscroll on the body */
+  overscroll-behavior-y: none;
+  /* iOS WebView smooth scrolling */
+  -webkit-overflow-scrolling: touch;
 }
 
 html {
   scroll-behavior: smooth;
+  /* iOS dark mode support for WebView / standalone */
+  color-scheme: light dark;
+  /* Prevent iOS auto-zoom on input focus (font-size < 16px triggers zoom) */
+  touch-action: manipulation;
+}
+
+/* Prevent iOS Safari from zooming into inputs with small font sizes */
+@supports (-webkit-touch-callout: none) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
 }
 
 * {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* iOS standalone / Capacitor WebView safe area helpers */
+@supports (padding-top: env(safe-area-inset-top)) {
+  /* Sticky header needs top offset for notch */
+  .ios-safe-top {
+    top: env(safe-area-inset-top);
+  }
+  /* Fixed elements at top need safe area offset */
+  .ios-safe-fixed-top {
+    top: env(safe-area-inset-top);
+  }
+  /* Bottom-positioned elements need home indicator clearance */
+  .ios-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  /* Fixed bottom elements: offset from home indicator */
+  .ios-safe-fixed-bottom {
+    bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* GPU compositing layer for sticky/fixed elements (prevents iOS WebView flicker) */
+.gpu-layer {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 /* Premium card gradient backgrounds */

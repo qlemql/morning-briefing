@@ -266,11 +266,14 @@ export default function PaywallOverlay({
       aria-modal="true"
       aria-label="프리미엄 콘텐츠 잠금 해제"
     >
-      <div className={`w-full sm:max-w-md bg-white dark:bg-[#1c1c1e] rounded-t-3xl sm:rounded-2xl p-6 sm:mx-4 shadow-2xl transition-all duration-300 ease-out ${
-        animateIn
-          ? 'translate-y-0 opacity-100 scale-100'
-          : 'translate-y-8 opacity-0 scale-[0.97]'
-      }`}>
+      <div
+        className={`w-full sm:max-w-md bg-white dark:bg-[#1c1c1e] rounded-t-3xl sm:rounded-2xl p-6 sm:mx-4 shadow-2xl transition-all duration-300 ease-out ${
+          animateIn
+            ? 'translate-y-0 opacity-100 scale-100'
+            : 'translate-y-8 opacity-0 scale-[0.97]'
+        }`}
+        style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
+      >
         <PaywallContent key={String(isVisible)} {...rest} />
       </div>
     </div>

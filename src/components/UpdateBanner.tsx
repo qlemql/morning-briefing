@@ -39,7 +39,7 @@ export default function UpdateBanner() {
   if (!show) return null;
 
   return (
-    <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 animate-slide-up">
+    <div className="fixed left-1/2 -translate-x-1/2 z-50 animate-slide-up" style={{ top: 'max(3.5rem, calc(3.5rem + env(safe-area-inset-top)))' }}>
       <div className="bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 max-w-sm">
         <span className="text-base">✨</span>
         <span className="flex-1">{message}</span>

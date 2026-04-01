@@ -34,7 +34,7 @@ export default function ToastContainer() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] flex flex-col gap-2 pointer-events-none">
+    <div className="fixed left-1/2 -translate-x-1/2 z-[60] flex flex-col gap-2 pointer-events-none" style={{ bottom: 'max(6rem, calc(5rem + env(safe-area-inset-bottom)))' }}>
       {toasts.map((t) => (
         <div
           key={t.id}

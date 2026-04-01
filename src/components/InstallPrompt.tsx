@@ -55,7 +55,7 @@ export default function InstallPrompt() {
   if (!visible) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-40 mx-auto max-w-lg animate-slide-up">
+    <div className="fixed left-4 right-4 z-40 mx-auto max-w-lg animate-slide-up ios-safe-fixed-bottom" style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
       <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 p-4 flex items-start gap-3">
         <div className="flex-shrink-0 w-10 h-10 bg-gray-900 dark:bg-gray-700 rounded-xl flex items-center justify-center text-lg">
           📱

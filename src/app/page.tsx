@@ -281,16 +281,16 @@ export default function Home() {
         <UpdateBanner />
       </Suspense>
 
-      {/* Top loading bar */}
+      {/* Top loading bar — offset for iOS safe area */}
       {loading && (
         <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-gray-200 dark:bg-gray-800">
           <div className="h-full bg-gray-900 dark:bg-gray-100 loading-bar" />
         </div>
       )}
 
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-sm border-b border-gray-200/80 dark:border-gray-800">
-        <div className="mx-auto max-w-lg px-4 pt-4 pb-3">
+      {/* Header — sticky with iOS notch safe area + GPU layer for flicker prevention */}
+      <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-sm border-b border-gray-200/80 dark:border-gray-800 ios-safe-top will-change-transform" style={{ transform: 'translateZ(0)' }}>
+        <div className="mx-auto max-w-lg px-4 pb-3" style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
           <div className="flex items-center justify-between mb-3">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">아침 브리핑</h1>
@@ -494,8 +494,8 @@ export default function Home() {
         )}
       </main>
 
-      {/* Footer with donation */}
-      <footer className="mx-auto max-w-lg px-4 pb-8 pt-4 space-y-3">
+      {/* Footer with donation — extra bottom padding for iOS home indicator */}
+      <footer className="mx-auto max-w-lg px-4 pt-4 space-y-3" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
         {DONATION_URL && !CacheUtils.isInTrialPeriod() && (
           <a
             href={DONATION_URL}
