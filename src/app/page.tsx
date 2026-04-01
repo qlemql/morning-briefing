@@ -289,7 +289,7 @@ export default function Home() {
       )}
 
       {/* Header — sticky with iOS notch safe area + GPU layer for flicker prevention */}
-      <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-sm border-b border-gray-200/80 dark:border-gray-800 ios-safe-top will-change-transform" style={{ transform: 'translateZ(0)' }}>
+      <header className="sticky top-0 z-40 bg-white dark:bg-[#1c1c1e] border-b border-gray-200/80 dark:border-gray-800 ios-safe-top will-change-transform" style={{ transform: 'translateZ(0)' }}>
         <div className="mx-auto max-w-lg px-4 pb-3" style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
           <div className="flex items-center justify-between mb-3">
             <div>
