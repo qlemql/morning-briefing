@@ -15,7 +15,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL('https://morning-briefing-mocha.vercel.app'),
   title: '아침 브리핑 — AI가 매일 아침 정리하는 뉴스',
-  description: 'AI가 매일 아침 경제·투자·생활 뉴스를 3장의 카드로 정리해드립니다. 핵심 뉴스, 영향 분석, 실전 인사이트.',
+  description: '매일 아침 3분, AI가 경제·투자·생활 뉴스를 카드 3장으로 정리해드립니다. 핵심 뉴스, 영향 분석, 실전 인사이트.',
   keywords: ['뉴스', '브리핑', '경제', '투자', '생활', '테크', 'AI', '아침뉴스', '뉴스요약'],
   robots: {
     index: true,
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: '아침 브리핑 — AI 뉴스 브리핑',
-    description: 'AI가 매일 아침 경제·투자·생활 뉴스를 3장의 카드로 정리해드립니다.',
+    description: '매일 아침 3분, AI가 경제·투자·생활 뉴스를 카드 3장으로 정리해드립니다.',
     type: 'website',
     locale: 'ko_KR',
     siteName: '아침 브리핑',
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: '아침 브리핑 — AI 뉴스 브리핑',
-    description: 'AI가 매일 아침 경제·투자·생활 뉴스를 3장의 카드로 정리해드립니다.',
+    description: '매일 아침 3분, AI가 경제·투자·생활 뉴스를 카드 3장으로 정리해드립니다.',
     images: ['/api/og'],
   },
   other: {
@@ -96,7 +96,7 @@ export default function RootLayout({
                   '@type': 'WebSite',
                   name: '아침 브리핑',
                   url: 'https://morning-briefing-mocha.vercel.app',
-                  description: 'AI가 매일 아침 경제·투자·생활 뉴스를 3장의 카드로 정리해드립니다.',
+                  description: '매일 아침 3분, AI가 경제·투자·생활 뉴스를 카드 3장으로 정리해드립니다.',
                   inLanguage: 'ko-KR',
                   publisher: {
                     '@type': 'Organization',
@@ -113,7 +113,7 @@ export default function RootLayout({
                 {
                   '@type': 'WebApplication',
                   name: '아침 브리핑',
-                  description: 'AI가 매일 아침 경제·투자·생활 뉴스를 3장의 카드로 정리해드립니다. 핵심 뉴스, 영향 분석, 실전 인사이트.',
+                  description: '매일 아침 3분, AI가 경제·투자·생활 뉴스를 카드 3장으로 정리해드립니다. 핵심 뉴스, 영향 분석, 실전 인사이트.',
                   url: 'https://morning-briefing-mocha.vercel.app',
                   applicationCategory: 'NewsApplication',
                   operatingSystem: 'Web',

@@ -91,7 +91,7 @@ function PaywallContent({
             7일간 모든 카드를 무료로 보셨어요.
           </p>
           <p className="text-gray-500 dark:text-gray-400 text-sm mb-5">
-            매일 아침, 깊이 있는 분석을 계속 받아보세요.
+            매일 3분, 경제·투자·생활 핵심을 카드 3장으로 계속 받아보세요.
           </p>
 
           {/* Pricing card */}

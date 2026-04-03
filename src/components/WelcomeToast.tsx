@@ -42,7 +42,7 @@ export default function WelcomeToast() {
             아침 브리핑에 오신 걸 환영합니다!
           </p>
           <p className="text-xs text-white/60 mt-0.5">
-            AI가 매일 아침 핵심 뉴스를 카드로 정리해드려요.
+            매일 아침 3분이면 오늘의 핵심 뉴스 끝!
           </p>
         </div>
         <button

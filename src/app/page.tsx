@@ -15,8 +15,9 @@ const InstallPrompt = lazy(() => import('@/components/InstallPrompt'));
 const WelcomeToast = lazy(() => import('@/components/WelcomeToast'));
 const UpdateBanner = lazy(() => import('@/components/UpdateBanner'));
 const MarketSnapshot = lazy(() => import('@/components/MarketSnapshot'));
+const DailyQuiz = lazy(() => import('@/components/DailyQuiz'));
 // [HIDDEN] 아래 컴포넌트들은 유저 확보 후 활성화 예정
-// NotificationPrompt, EmailCollector, WatchlistSection, ReferralCard, DailyQuiz
+// NotificationPrompt, EmailCollector, WatchlistSection, ReferralCard
 
 import { BriefingCategory } from '@/lib/types';
 import { CacheUtils } from '@/lib/cache';
@@ -337,7 +338,7 @@ export default function Home() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">아침 브리핑</h1>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-2">
-                <span>{getTodayLabel()} · {new Date().getHours() < 12 ? '좋은 아침이에요' : new Date().getHours() < 18 ? '좋은 오후에요' : '좋은 저녁이에요'}</span>
+                <span>{getTodayLabel()} · {new Date().getHours() < 12 ? '3분 아침 브리핑' : new Date().getHours() < 18 ? '좋은 오후에요' : '좋은 저녁이에요'}</span>
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -444,7 +445,7 @@ export default function Home() {
         ) : !error ? (
           <div className="text-center py-16">
             <div className="text-3xl mb-3">☕</div>
-            <p className="text-gray-400 dark:text-gray-500 text-sm">오늘의 브리핑을 준비하고 있어요</p>
+            <p className="text-gray-400 dark:text-gray-500 text-sm">3분이면 끝나는 오늘의 브리핑을 준비하고 있어요</p>
             {typeof navigator !== 'undefined' && 'connection' in navigator &&
               (navigator as unknown as { connection: { effectiveType: string } }).connection?.effectiveType === 'slow-2g' && (
               <p className="text-gray-300 text-xs mt-2">느린 네트워크가 감지되었어요. 잠시만 기다려주세요.</p>
@@ -454,28 +455,11 @@ export default function Home() {
 
         {/* [HIDDEN] Watchlist — 핵심 경험과 거리 먼 기능, 유저 확보 후 활성화 */}
 
-        {/* [COMING SOON] Daily Quiz & Poll */}
+        {/* Daily Quiz & Poll */}
         {briefing && !loading && (
-          <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-[#1c1c1e]/50 px-4 py-3 flex items-center gap-3">
-            <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-400 dark:text-indigo-400" aria-hidden="true">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                오늘의 경제 퀴즈
-              </p>
-              <p className="text-xs text-gray-400 dark:text-gray-500">
-                곧 만나요
-              </p>
-            </div>
-            <span className="flex-shrink-0 text-[10px] font-semibold text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">
-              SOON
-            </span>
-          </div>
+          <Suspense fallback={null}>
+            <DailyQuiz />
+          </Suspense>
         )}
 
         {/* Copy entire briefing summary */}

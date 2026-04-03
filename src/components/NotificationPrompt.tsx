@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { track } from '@/lib/track';
+import { isPushSupported, isPushSubscribed, subscribeToPush } from '@/lib/push';
 
 const STORAGE_KEY = 'mb_notif_dismissed';
 const SHOW_AFTER_VISITS = 2; // Show after 2 page views
@@ -9,6 +10,7 @@ const SHOW_AFTER_VISITS = 2; // Show after 2 page views
 export default function NotificationPrompt() {
   const [visible, setVisible] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     // Don't show if already dismissed, subscribed, or in native app
@@ -16,15 +18,13 @@ export default function NotificationPrompt() {
     if (localStorage.getItem(STORAGE_KEY)) return;
     if ((window as unknown as { __NATIVE_APP__?: boolean }).__NATIVE_APP__) return;
 
-    // Check if already subscribed
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
-      navigator.serviceWorker.ready.then((reg) => {
-        reg.pushManager.getSubscription().then((sub) => {
-          if (sub) {
-            setSubscribed(true);
-            return;
-          }
-        });
+    // Check if push is supported and already subscribed
+    if (isPushSupported()) {
+      isPushSubscribed().then((sub) => {
+        if (sub) {
+          setSubscribed(true);
+          return;
+        }
       });
     }
 
@@ -45,35 +45,35 @@ export default function NotificationPrompt() {
 
   const handleSubscribe = useCallback(async () => {
     track('notif_subscribe_click');
+    setLoading(true);
 
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    if (!isPushSupported()) {
       // Fallback: just save a flag that user is interested
       localStorage.setItem('mb_wants_notif', 'true');
       setSubscribed(true);
       setVisible(false);
       localStorage.setItem(STORAGE_KEY, 'true');
+      setLoading(false);
       return;
     }
 
     try {
-      const reg = await navigator.serviceWorker.ready;
-      const permission = await Notification.requestPermission();
-      if (permission === 'granted') {
-        // For now, just get the subscription - we'll add server-side storage later
-        await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: undefined, // Will need VAPID key for production
-        });
+      const success = await subscribeToPush();
+      if (success) {
         setSubscribed(true);
         track('notif_subscribed');
+      } else {
+        // Permission denied or VAPID not configured
+        localStorage.setItem('mb_wants_notif', 'true');
       }
     } catch {
-      // Permission denied or error — save interest flag anyway
+      // Permission denied or error -- save interest flag anyway
       localStorage.setItem('mb_wants_notif', 'true');
     }
 
     setVisible(false);
     localStorage.setItem(STORAGE_KEY, 'true');
+    setLoading(false);
   }, []);
 
   if (!visible || subscribed) return null;
@@ -101,9 +101,10 @@ export default function NotificationPrompt() {
           </button>
           <button
             onClick={handleSubscribe}
-            className="text-xs font-semibold text-white bg-gray-900 px-3 py-1.5 rounded-lg hover:bg-gray-800 active:scale-95 transition-all"
+            disabled={loading}
+            className="text-xs font-semibold text-white bg-gray-900 px-3 py-1.5 rounded-lg hover:bg-gray-800 active:scale-95 transition-all disabled:opacity-50"
           >
-            알림 받기
+            {loading ? '...' : '알림 받기'}
           </button>
         </div>
       </div>

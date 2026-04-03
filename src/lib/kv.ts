@@ -76,6 +76,18 @@ export async function kvSadd(key: string, member: string): Promise<number> {
   return 1;
 }
 
+export async function kvSrem(key: string, member: string): Promise<number> {
+  if (USE_REDIS) return redis<number>(['SREM', key, member]);
+  const raw = mem.get(key);
+  if (!raw) return 0;
+  const set: string[] = JSON.parse(raw);
+  const idx = set.indexOf(member);
+  if (idx === -1) return 0;
+  set.splice(idx, 1);
+  mem.set(key, JSON.stringify(set));
+  return 1;
+}
+
 export async function kvScard(key: string): Promise<number> {
   if (USE_REDIS) return redis<number>(['SCARD', key]);
   const raw = mem.get(key);

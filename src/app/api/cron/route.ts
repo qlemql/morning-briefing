@@ -99,6 +99,34 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
   }
 
+  // Push notification: notify subscribers that new briefing is ready
+  let pushResult: string | undefined;
+  const hasSuccess = Object.values(results).some((r) => r.startsWith('OK'));
+  if (hasSuccess) {
+    try {
+      const pushUrl = new URL('/api/push/send', request.url);
+      const pushRes = await fetch(pushUrl.toString(), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.CRON_SECRET}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: '아침 브리핑',
+          body: '오늘의 경제 브리핑이 도착했어요',
+          url: '/',
+        }),
+      });
+      const pushData = await pushRes.json();
+      pushResult = `sent:${pushData.sent ?? 0} failed:${pushData.failed ?? 0}`;
+      console.log('[Cron] Push notification result:', pushData);
+    } catch (pushError) {
+      // Push failure should never affect briefing serving
+      pushResult = 'error';
+      console.warn('[Cron] Push notification failed:', pushError);
+    }
+  }
+
   const elapsed = Date.now() - startTime;
   const failCount = Object.values(results).filter((r) => r.startsWith('FAIL')).length;
   console.log(
@@ -111,6 +139,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     date: today,
     results,
     snsQueue: Object.keys(snsResults).length > 0 ? snsResults : undefined,
+    push: pushResult,
     elapsedMs: elapsed,
     timestamp: new Date().toISOString(),
   });

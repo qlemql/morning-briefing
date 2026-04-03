@@ -1,4 +1,4 @@
-const CACHE_NAME = 'morning-briefing-v8';
+const CACHE_NAME = 'morning-briefing-v9';
 const STATIC_ASSETS = [
   '/',
   '/privacy',
@@ -24,6 +24,50 @@ self.addEventListener('activate', (event) => {
     )
   );
   self.clients.claim();
+});
+
+// Push: show notification when a push message arrives
+self.addEventListener('push', (event) => {
+  let data = { title: '아침 브리핑', body: '오늘의 경제 브리핑이 도착했어요', url: '/' };
+  try {
+    if (event.data) {
+      data = Object.assign(data, event.data.json());
+    }
+  } catch {
+    // Use defaults if payload parsing fails
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/icons/icon-192x192.png',
+      badge: '/icons/icon-72x72.png',
+      tag: 'morning-briefing',
+      renotify: true,
+      data: { url: data.url },
+    })
+  );
+});
+
+// Notification click: open or focus the app
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const targetUrl = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Focus existing tab if open
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.navigate(targetUrl);
+          return client.focus();
+        }
+      }
+      // Otherwise open new tab
+      return self.clients.openWindow(targetUrl);
+    })
+  );
 });
 
 // Fetch: network-first for API, stale-while-revalidate for pages
@@ -57,7 +101,7 @@ self.addEventListener('fetch', (event) => {
   // API calls: network-first with 8s timeout, stale cache fallback
   if (url.pathname.startsWith('/api/')) {
     // Skip caching for analytics/subscribe (write-only endpoints)
-    if (url.pathname.includes('/analytics') || url.pathname.includes('/subscribe')) return;
+    if (url.pathname.includes('/analytics') || url.pathname.includes('/subscribe') || url.pathname.includes('/push')) return;
 
     event.respondWith(
       Promise.race([
