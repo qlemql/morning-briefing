@@ -219,18 +219,16 @@ export async function POST(
       (unlockToken !== '' && verifyUnlockToken(unlockToken, targetDate, category, userId)) ||
       (await checkUserUnlocked(userId));
 
-    // Server-side content gating: strip card 2-3 content for non-unlocked users
-    const gatedBriefing = {
-      ...briefing,
-      cards: briefing.cards.map((card) => {
-        if (card.number === 1 || isUnlocked) return card;
-        // Premium cards: keep title, summary, metadata but strip content
-        return {
-          ...card,
-          content: '',
-        };
-      }),
-    };
+    // Server-side content gating: temporarily disabled for MVP launch
+    // TODO: Re-enable when paid subscription is live
+    // const gatedBriefing = {
+    //   ...briefing,
+    //   cards: briefing.cards.map((card) => {
+    //     if (card.number === 1 || isUnlocked) return card;
+    //     return { ...card, content: '' };
+    //   }),
+    // };
+    const gatedBriefing = briefing;
 
     // Detect evergreen fallback by id prefix
     const isFallback = briefing.cards.some((card) => card.id.startsWith('eg_'));
