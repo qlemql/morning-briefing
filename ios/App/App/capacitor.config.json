@@ -6,9 +6,33 @@
 		"url": "https://morning-briefing-mocha.vercel.app",
 		"cleartext": false
 	},
+	"backgroundColor": "#f5f5f7",
 	"ios": {
-		"scheme": "아침브리핑",
-		"contentInset": "automatic"
+		"scheme": "App",
+		"contentInset": "automatic",
+		"allowsLinkPreview": false,
+		"scrollEnabled": true,
+		"backgroundColor": "#f5f5f7",
+		"preferredContentMode": "mobile"
 	},
-	"packageClassList": []
+	"plugins": {
+		"SplashScreen": {
+			"launchAutoHide": true,
+			"launchFadeOutDuration": 300,
+			"backgroundColor": "#f5f5f7",
+			"showSpinner": false
+		},
+		"PushNotifications": {
+			"presentationOptions": [
+				"badge",
+				"sound",
+				"alert"
+			]
+		}
+	},
+	"packageClassList": [
+		"CAPNetworkPlugin",
+		"PushNotificationsPlugin",
+		"SharePlugin"
+	]
 }

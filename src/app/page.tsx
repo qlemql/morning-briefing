@@ -26,6 +26,8 @@ import { track } from '@/lib/track';
 import { hapticLight, hapticMedium } from '@/lib/haptic';
 import { reportWebVitals } from '@/lib/vitals';
 import { VERSION_LABEL } from '@/lib/version';
+import { isNativePlatform, registerNativePush, addNativePushListeners } from '@/lib/native-push';
+import { getNetworkStatus, onNetworkChange } from '@/lib/native-offline';
 
 const DONATION_URL = 'https://qr.kakaopay.com/Fa0mKvPtZ';
 const SWIPE_THRESHOLD = 60;
@@ -75,6 +77,7 @@ export default function Home() {
   const [transitioning, setTransitioning] = useState(false);
   const [slowLoading, setSlowLoading] = useState(false);
   const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isOffline, setIsOffline] = useState(false);
 
   // 페이지 로드 시 unlock 상태 복원 (7일 체험 + 후원 + 서버)
   useEffect(() => {
@@ -153,6 +156,54 @@ export default function Home() {
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
+
+  // Native push notification registration (iOS/Android only)
+  useEffect(() => {
+    if (!isNativePlatform()) return;
+    let pushCleanup: (() => void) | null = null;
+
+    (async () => {
+      const token = await registerNativePush();
+      if (token) {
+        // Send APNs token to server
+        fetch('/api/push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, platform: 'ios' }),
+        }).catch(() => {});
+      }
+
+      // Listen for foreground notifications
+      pushCleanup = await addNativePushListeners({
+        onReceived: (n) => {
+          showToast(n.body || n.title || '새 브리핑이 도착했어요!', '🔔');
+        },
+      });
+    })();
+
+    return () => { pushCleanup?.(); };
+  }, []);
+
+  // Network status monitoring (native + web)
+  useEffect(() => {
+    let cleanup: (() => void) | null = null;
+
+    (async () => {
+      // Check initial status
+      const status = await getNetworkStatus();
+      setIsOffline(!status.connected);
+
+      // Listen for changes
+      cleanup = await onNetworkChange((s) => {
+        setIsOffline(!s.connected);
+        if (s.connected) {
+          showToast('네트워크가 연결되었어요!', '🌐');
+        }
+      });
+    })();
+
+    return () => { cleanup?.(); };
   }, []);
 
   // Swipe gesture tracking
@@ -370,6 +421,16 @@ export default function Home() {
 
       {/* Trial period banner */}
       <TrialBanner />
+
+      {/* Offline mode banner */}
+      {isOffline && (
+        <div className="mx-auto max-w-lg px-4 pt-3">
+          <div className="rounded-xl p-3 text-sm flex items-center gap-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+            <span aria-hidden="true">{'📡'}</span>
+            <span>오프라인 모드 — 캐시된 브리핑을 표시합니다</span>
+          </div>
+        </div>
+      )}
 
       {/* Error banner */}
       {error && (

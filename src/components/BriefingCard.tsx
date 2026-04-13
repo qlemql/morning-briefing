@@ -7,6 +7,7 @@ import { track } from '@/lib/track';
 import { hapticLight } from '@/lib/haptic';
 import { showToast } from '@/components/Toast';
 import * as tts from '@/lib/tts';
+import { nativeShare } from '@/lib/native-share';
 
 interface BriefingCardProps {
   card: BriefingCardType;
@@ -98,21 +99,14 @@ function useTts(text: string, cardId: string) {
 
 async function shareCard(card: BriefingCardType, categoryName?: string): Promise<boolean> {
   const categoryTag = categoryName ? ` #${categoryName}` : '';
-  const text = `[아침 브리핑${categoryTag}] ${card.title}\n\n${card.summary}\n\n매일 아침 AI가 정리하는 뉴스 👉 https://morning-briefing-mocha.vercel.app`;
-  if (typeof navigator !== 'undefined' && navigator.share) {
-    try {
-      await navigator.share({ title: '아침 브리핑', text, url: 'https://morning-briefing-mocha.vercel.app' });
-      return true;
-    } catch {
-      // user cancelled or not supported — fall back to clipboard
-    }
-  }
-  if (typeof navigator !== 'undefined' && navigator.clipboard) {
-    await navigator.clipboard.writeText(text);
+  const text = `[아침 브리핑${categoryTag}] ${card.title}\n\n${card.summary}\n\n매일 아침 AI가 정리하는 뉴스`;
+  const url = 'https://morning-briefing-mocha.vercel.app';
+
+  const shared = await nativeShare({ title: '아침 브리핑', text, url });
+  if (shared) {
     showToast('링크가 복사되었어요!', '✅');
-    return true;
   }
-  return false;
+  return shared;
 }
 
 export default memo(function BriefingCard({
