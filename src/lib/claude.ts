@@ -362,10 +362,14 @@ export async function generateBriefing(
     });
   }
 
+  // Strip HTML tags from web_search citations (e.g. <cite index="...">...</cite>)
+  const stripCiteTags = (text: string): string =>
+    text.replace(/<\/?cite[^>]*>/g, '').replace(/\s{2,}/g, ' ').trim();
+
   const validatedCards = parsed.cards.slice(0, 3).map((card, index) => {
-    const title = (card.title || '').trim();
-    const content = (card.content || '').trim();
-    const summary = (card.summary || '').trim();
+    const title = stripCiteTags((card.title || '')).trim();
+    const content = stripCiteTags((card.content || '')).trim();
+    const summary = stripCiteTags((card.summary || '')).trim();
 
     // title이 비거나 너무 긴 경우 자르기
     const clampedTitle = title.length > 25 ? title.substring(0, 23) + '…' : title;
