@@ -15,6 +15,7 @@ const InstallPrompt = lazy(() => import('@/components/InstallPrompt'));
 const WelcomeToast = lazy(() => import('@/components/WelcomeToast'));
 const UpdateBanner = lazy(() => import('@/components/UpdateBanner'));
 const MarketSnapshot = lazy(() => import('@/components/MarketSnapshot'));
+const DailyTerm = lazy(() => import('@/components/DailyTerm'));
 const DailyQuiz = lazy(() => import('@/components/DailyQuiz'));
 // [HIDDEN] 아래 컴포넌트들은 유저 확보 후 활성화 예정
 // NotificationPrompt, EmailCollector, WatchlistSection, ReferralCard
@@ -558,6 +559,13 @@ export default function Home() {
         ) : null}
 
         {/* [HIDDEN] Watchlist — 핵심 경험과 거리 먼 기능, 유저 확보 후 활성화 */}
+
+        {/* Daily Term — 브리핑 카드 아래, 퀴즈 위 */}
+        {briefing && !loading && (
+          <Suspense fallback={null}>
+            <DailyTerm />
+          </Suspense>
+        )}
 
         {/* Daily Quiz & Poll */}
         {briefing && !loading && (
