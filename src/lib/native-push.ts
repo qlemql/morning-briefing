@@ -55,7 +55,15 @@ export async function addNativePushListeners(callbacks: {
   if (callbacks.onReceived) {
     const h = await PushNotifications.addListener(
       'pushNotificationReceived',
-      (notification) => {
+      async (notification) => {
+        // Set badge count on push received (native only)
+        try {
+          const { Badge } = await import('@capawesome/capacitor-badge');
+          await Badge.set({ count: 1 });
+        } catch {
+          // badge plugin unavailable — ignore
+        }
+
         callbacks.onReceived?.({
           title: notification.title ?? undefined,
           body: notification.body ?? undefined,

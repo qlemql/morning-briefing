@@ -1,12 +1,11 @@
 import Link from 'next/link';
 import { SUBSCRIPTION_PRICE, ANNUAL_SUBSCRIPTION_PRICE, TRIAL_DAYS } from '@/lib/payment';
+import KakaoPaySection from '@/components/KakaoPaySection';
 
 export const metadata = {
   title: '구독하기 — 아침 브리핑',
   description: '매일 아침, AI가 정리하는 깊이 있는 뉴스 브리핑을 구독하세요. 월 3,900원.',
 };
-
-const DONATION_URL = 'https://qr.kakaopay.com/Fa0mKvPtZ';
 
 function CheckIcon() {
   return (
@@ -119,23 +118,8 @@ export default function SubscribePage() {
           </div>
         </div>
 
-        {/* KakaoPay donation — current alternative */}
-        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6 mb-8">
-          <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-2">
-            지금은 카카오페이로 후원할 수 있어요
-          </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            정식 결제 시스템은 준비 중입니다. 커피 한 잔 가격으로 응원해주시면 오늘 하루 전체 브리핑이 열립니다.
-          </p>
-          <a
-            href={DONATION_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block w-full text-center rounded-xl bg-amber-500 text-white py-3.5 font-semibold text-base hover:bg-amber-600 transition"
-          >
-            카카오페이로 후원하기
-          </a>
-        </div>
+        {/* KakaoPay donation — hidden on iOS native (App Store compliance) */}
+        <KakaoPaySection />
 
         {/* FAQ */}
         <div className="space-y-4 mb-8">

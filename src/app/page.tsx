@@ -29,7 +29,7 @@ import { VERSION_LABEL } from '@/lib/version';
 import { isNativePlatform, registerNativePush, addNativePushListeners } from '@/lib/native-push';
 import { getNetworkStatus, onNetworkChange } from '@/lib/native-offline';
 
-const DONATION_URL = 'https://qr.kakaopay.com/Fa0mKvPtZ';
+const DONATION_URL_WEB = 'https://qr.kakaopay.com/Fa0mKvPtZ';
 const SWIPE_THRESHOLD = 60;
 const MAX_RETRIES = 2;
 
@@ -78,6 +78,29 @@ export default function Home() {
   const [slowLoading, setSlowLoading] = useState(false);
   const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isOffline, setIsOffline] = useState(false);
+  const [isNative, setIsNative] = useState(false);
+
+  // Detect native platform after mount (SSR-safe)
+  useEffect(() => {
+    setIsNative(isNativePlatform());
+  }, []);
+
+  const DONATION_URL = isNative ? '' : DONATION_URL_WEB;
+
+  // Splash screen hide + badge clear on mount (native only)
+  useEffect(() => {
+    if (!isNativePlatform()) return;
+    (async () => {
+      try {
+        const { SplashScreen } = await import('@capacitor/splash-screen');
+        await SplashScreen.hide();
+      } catch { /* ignore */ }
+      try {
+        const { Badge } = await import('@capawesome/capacitor-badge');
+        await Badge.clear();
+      } catch { /* ignore */ }
+    })();
+  }, []);
 
   // 페이지 로드 시 unlock 상태 복원 (7일 체험 + 후원 + 서버)
   useEffect(() => {
@@ -126,10 +149,9 @@ export default function Home() {
     track('page_view', { category: 'economy' });
     reportWebVitals();
 
-    // Auto-refresh when tab becomes visible after midnight (new day)
+    // Auto-refresh when app becomes active after midnight (new day)
     let lastKnownDate = CacheUtils.getTodayDate();
-    const handleVisibility = () => {
-      if (document.visibilityState !== 'visible') return;
+    const checkNewDay = () => {
       const now = new Date(Date.now() + 9 * 3600 * 1000).toISOString().split('T')[0];
       if (lastKnownDate !== now) {
         lastKnownDate = now;
@@ -154,8 +176,29 @@ export default function Home() {
         }
       }
     };
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
+
+    // Native: use @capacitor/app for foreground detection (replaces visibilitychange)
+    let appCleanup: (() => void) | null = null;
+    if (isNativePlatform()) {
+      (async () => {
+        try {
+          const { App } = await import('@capacitor/app');
+          const handle = await App.addListener('appStateChange', (state) => {
+            if (state.isActive) checkNewDay();
+          });
+          appCleanup = () => { handle.remove(); };
+        } catch { /* ignore */ }
+      })();
+    } else {
+      // Web: visibilitychange fallback
+      const handleVisibility = () => {
+        if (document.visibilityState === 'visible') checkNewDay();
+      };
+      document.addEventListener('visibilitychange', handleVisibility);
+      appCleanup = () => document.removeEventListener('visibilitychange', handleVisibility);
+    }
+
+    return () => { appCleanup?.(); };
   }, []);
 
   // Native push notification registration (iOS/Android only)
@@ -583,7 +626,7 @@ export default function Home() {
 
       {/* Footer with donation — extra bottom padding for iOS home indicator */}
       <footer className="mx-auto max-w-lg px-4 pt-4 space-y-3" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
-        {DONATION_URL && !CacheUtils.isInTrialPeriod() && (
+        {DONATION_URL && !isNative && !CacheUtils.isInTrialPeriod() && (
           <a
             href={DONATION_URL}
             target="_blank"
@@ -642,7 +685,7 @@ export default function Home() {
           CacheUtils.clearBriefing('lifestyle', todayDate);
         }}
         onClose={() => setShowPaywallModal(false)}
-        donationUrl={DONATION_URL || undefined}
+        donationUrl={isNative ? undefined : (DONATION_URL || undefined)}
       />
 
       {/* [HIDDEN] NotificationPrompt — VAPID 미구현, 유저 0명 */}

@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.morningbriefing.app',
+  appId: 'com.qlemql.morningbriefing',
   appName: '아침 브리핑',
   webDir: 'out',
   server: {

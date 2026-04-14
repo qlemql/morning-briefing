@@ -28,6 +28,9 @@ function PaywallContent({
   const trialDays = CacheUtils.getTrialDaysRemaining();
   const isInTrial = CacheUtils.isInTrialPeriod();
 
+  // iOS native: no donation flow available
+  const isNativeMode = !donationUrl;
+
   // If still in trial, unlock immediately
   useEffect(() => {
     if (isInTrial) {
@@ -35,24 +38,25 @@ function PaywallContent({
     }
   }, [isInTrial, onUnlock]);
 
-  // Countdown timer — only after donation page opened
+  // Countdown timer — only after donation page opened (web only)
   useEffect(() => {
-    if (step !== 'waiting' || !donationOpened || countdown <= 0) return;
+    if (isNativeMode || step !== 'waiting' || !donationOpened || countdown <= 0) return;
     const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
     return () => clearTimeout(timer);
-  }, [step, countdown, donationOpened]);
+  }, [isNativeMode, step, countdown, donationOpened]);
 
-  // Transition to unlocked when countdown hits 0
+  // Transition to unlocked when countdown hits 0 (web only)
   useEffect(() => {
+    if (isNativeMode) return;
     if (step === 'waiting' && countdown <= 0) {
       const t = setTimeout(() => setStep('unlocked'), 100);
       return () => clearTimeout(t);
     }
-  }, [step, countdown]);
+  }, [isNativeMode, step, countdown]);
 
-  // Tab return detection — accelerate countdown
+  // Tab return detection — accelerate countdown (web only)
   useEffect(() => {
-    if (step !== 'waiting' || !donationOpened) return;
+    if (isNativeMode || step !== 'waiting' || !donationOpened) return;
     const handleVisibility = () => {
       if (document.visibilityState === 'visible' && countdown > 3) {
         setCountdown(3);
@@ -60,7 +64,7 @@ function PaywallContent({
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [step, donationOpened, countdown]);
+  }, [isNativeMode, step, donationOpened, countdown]);
 
   const handleDonationClick = () => {
     if (donationUrl) {
@@ -77,6 +81,52 @@ function PaywallContent({
     setCountdown(10);
   };
 
+  // iOS native mode: simplified UI without donation flow
+  if (isNativeMode) {
+    return (
+      <>
+        {/* Handle bar (mobile) */}
+        <div className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-5 sm:hidden" />
+
+        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+          무료 체험이 끝났어요
+        </h2>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">
+          7일간 모든 카드를 무료로 보셨어요.
+        </p>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mb-5">
+          매일 3분, 경제·투자·생활 핵심을 카드 3장으로 계속 받아보세요.
+        </p>
+
+        {/* Pricing card */}
+        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-5 mb-5">
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
+              <span className="text-green-500">✓</span>
+              <span><strong>영향분석</strong> — 뉴스가 내 삶에 미치는 영향</span>
+            </div>
+            <div className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
+              <span className="text-green-500">✓</span>
+              <span><strong>실전인사이트</strong> — 바로 쓸 수 있는 전략</span>
+            </div>
+            <div className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
+              <span className="text-green-500">✓</span>
+              <span>경제·투자·생활 <strong>전체 카테고리</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={onClose}
+          className="w-full rounded-xl bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 py-3.5 font-semibold text-base hover:bg-gray-800 dark:hover:bg-gray-200 transition"
+        >
+          무료로 볼게요
+        </button>
+      </>
+    );
+  }
+
+  // Web mode: full donation flow
   return (
     <>
       {/* Handle bar (mobile) */}

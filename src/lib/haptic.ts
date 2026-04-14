@@ -1,12 +1,28 @@
 'use client';
 
+import { Capacitor } from '@capacitor/core';
+
 /**
- * Haptic feedback utility for mobile devices.
- * Uses the Vibration API where available (Android Chrome, etc.)
- * Silently no-ops on unsupported platforms (iOS Safari, desktop).
+ * Haptic feedback utility.
+ * Native: @capacitor/haptics (real haptic engine)
+ * Web: navigator.vibrate() fallback
  */
+
+async function nativeHaptic(style: 'Light' | 'Medium' | 'Heavy'): Promise<void> {
+  try {
+    const { Haptics, ImpactStyle } = await import('@capacitor/haptics');
+    await Haptics.impact({ style: ImpactStyle[style] });
+  } catch {
+    // silently ignore
+  }
+}
+
 export function hapticLight(): void {
   try {
+    if (Capacitor.isNativePlatform()) {
+      nativeHaptic('Light');
+      return;
+    }
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       navigator.vibrate(10);
     }
@@ -17,6 +33,10 @@ export function hapticLight(): void {
 
 export function hapticMedium(): void {
   try {
+    if (Capacitor.isNativePlatform()) {
+      nativeHaptic('Medium');
+      return;
+    }
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       navigator.vibrate(25);
     }
