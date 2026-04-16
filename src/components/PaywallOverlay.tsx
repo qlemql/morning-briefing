@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, startTransition } from 'react';
 // import Link from 'next/link';
 import { hapticMedium } from '@/lib/haptic';
 import { CacheUtils } from '@/lib/cache';
+import { isNativePlatform } from '@/lib/native-push';
 
 interface PaywallOverlayProps {
   onUnlock: () => void;
@@ -271,7 +272,13 @@ export default function PaywallOverlay({
 }: PaywallOverlayProps) {
   const [mounted, setMounted] = useState(false);
   const [animateIn, setAnimateIn] = useState(false);
+  const [isNative, setIsNative] = useState(false);
   const backdropRef = useRef<HTMLDivElement>(null);
+
+  // Detect native after mount (SSR-safe). iOS must never show paywall (App Store compliance).
+  useEffect(() => {
+    setIsNative(isNativePlatform());
+  }, []);
 
   useEffect(() => {
     if (isVisible) {
@@ -304,6 +311,8 @@ export default function PaywallOverlay({
   }, [isVisible, rest]);
 
   if (!mounted) return null;
+  // Defense-in-depth: never render paywall on iOS native (App Store compliance)
+  if (isNative) return null;
 
   return (
     <div

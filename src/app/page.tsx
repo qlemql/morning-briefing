@@ -438,7 +438,8 @@ export default function Home() {
             </div>
             <div className="flex items-center gap-2">
               <ThemeToggle />
-              {isPremiumUnlocked && (() => {
+              {/* iOS native: no trial/PRO badge (App Store compliance — all content free) */}
+              {!isNative && isPremiumUnlocked && (() => {
                 const trialDays = CacheUtils.getTrialDaysRemaining();
                 const inTrial = CacheUtils.isInTrialPeriod();
                 if (inTrial && trialDays > 0) {
@@ -463,8 +464,8 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Trial period banner */}
-      <TrialBanner />
+      {/* Trial period banner — hidden on iOS native (App Store compliance — all content free) */}
+      {!isNative && <TrialBanner />}
 
       {/* Offline mode banner */}
       {isOffline && (
@@ -541,9 +542,14 @@ export default function Home() {
               key={`${activeCategory}-${card.id}`}
               card={card}
               categoryId={activeCategory}
-              isPaywalled={card.number > 1}
-              isPremiumUnlocked={isPremiumUnlocked}
-              onPaywallClick={() => { track('paywall_click'); setShowPaywallModal(true); }}
+              isPaywalled={isNative ? false : card.number > 1}
+              isPremiumUnlocked={isNative ? true : isPremiumUnlocked}
+              onPaywallClick={() => {
+                // iOS native: never open paywall (App Store compliance)
+                if (isNative) return;
+                track('paywall_click');
+                setShowPaywallModal(true);
+              }}
               delay={index * 80}
             />
           ))
@@ -661,8 +667,9 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* Paywall modal */}
+      {/* Paywall modal — hidden on iOS native (App Store compliance) */}
       <Suspense fallback={null}>
+      {!isNative && (
       <PaywallOverlay
         isVisible={showPaywallModal}
         onUnlock={async () => {
@@ -695,6 +702,7 @@ export default function Home() {
         onClose={() => setShowPaywallModal(false)}
         donationUrl={isNative ? undefined : (DONATION_URL || undefined)}
       />
+      )}
 
       {/* [HIDDEN] NotificationPrompt — VAPID 미구현, 유저 0명 */}
       {/* [HIDDEN] EmailCollector — 뉴스레터 발송 미구현 */}
