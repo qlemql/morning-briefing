@@ -1,8 +1,8 @@
 import SubscribeClient from './SubscribeClient';
 
 export const metadata = {
-  title: '구독하기 — 아침 브리핑',
-  description: '매일 아침, AI가 정리하는 깊이 있는 뉴스 브리핑을 구독하세요. 월 3,900원.',
+  title: '후원하기 — 아침 브리핑',
+  description: '아침 브리핑은 모두 무료예요. 매일 도움이 되셨다면 커피 한 잔으로 응원해주세요.',
 };
 
 export default function SubscribePage() {

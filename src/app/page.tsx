@@ -6,11 +6,11 @@ import BriefingCard from '@/components/BriefingCard';
 import CardSkeleton from '@/components/CardSkeleton';
 import PullToRefresh from '@/components/PullToRefresh';
 import ThemeToggle from '@/components/ThemeToggle';
-import TrialBanner from '@/components/TrialBanner';
+// [REMOVED] TrialBanner — 후원 모델 전환으로 체험 기간 개념 제거
 import ToastContainer, { showToast } from '@/components/Toast';
 
 // Lazy-load non-critical overlays (not needed for initial render)
-const PaywallOverlay = lazy(() => import('@/components/PaywallOverlay'));
+// [REMOVED] PaywallOverlay — 후원 모델 전환으로 페이월 제거
 const InstallPrompt = lazy(() => import('@/components/InstallPrompt'));
 const WelcomeToast = lazy(() => import('@/components/WelcomeToast'));
 const UpdateBanner = lazy(() => import('@/components/UpdateBanner'));
@@ -73,8 +73,8 @@ export default function Home() {
   const [briefings, setBriefings] = useState<Record<string, BriefingCategory>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<{ message: string; type: string } | null>(null);
-  const [isPremiumUnlocked, setIsPremiumUnlocked] = useState(false);
-  const [showPaywallModal, setShowPaywallModal] = useState(false);
+  // 후원 모델: 모든 카드를 누구에게나 무료 공개
+  const isPremiumUnlocked = true;
   const [transitioning, setTransitioning] = useState(false);
   const [slowLoading, setSlowLoading] = useState(false);
   const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -103,49 +103,9 @@ export default function Home() {
     })();
   }, []);
 
-  // 페이지 로드 시 unlock 상태 복원 (7일 체험 + 후원 + 서버)
+  // 페이지 로드 시 초기화 (후원 모델: unlock 플로우 제거됨)
   useEffect(() => {
-    // 0) 7일 무료체험 초기화 (첫 방문 시 시작일 기록)
-    CacheUtils.initTrial();
-
-    // 1) 체험 기간 또는 후원 unlock 확인
-    const inTrial = CacheUtils.isInTrialPeriod();
-    const dailyUnlock = CacheUtils.isPremiumUnlocked();
-    const subscribed = CacheUtils.isSubscribed();
-    if (inTrial || dailyUnlock || subscribed) {
-      setIsPremiumUnlocked(true);
-
-      // 체험/구독 중이면 서버에 unlock 등록 + HMAC 토큰 발급
-      // (서버가 카드 2-3 content를 내려보내려면 토큰이 필요)
-      // 토큰 발급 완료 후 기존 strip된 캐시를 무효화하여 재요청 트리거
-      fetch('/api/unlock', { method: 'POST' })
-        .then(() => fetch('/api/briefing?action=unlock'))
-        .then((r) => r.json())
-        .then((d) => {
-          const tokens = d.data?.tokens as Record<string, string> | undefined;
-          if (tokens) {
-            CacheUtils.setPremiumUnlocked(tokens);
-            // 토큰 발급 완료 → 기존 strip된 캐시 무효화 + 재요청
-            const today = CacheUtils.getTodayDate();
-            ['economy', 'investment', 'lifestyle'].forEach((cat) =>
-              CacheUtils.clearBriefing(cat, today),
-            );
-            setBriefings({}); // state 리셋 → useEffect에서 재로드
-          }
-        })
-        .catch(() => {});
-    } else {
-      // 체험 만료 후 — 서버 상태만 확인
-      fetch('/api/unlock')
-        .then((r) => r.json())
-        .then((d) => { if (d.data?.unlocked) setIsPremiumUnlocked(true); })
-        .catch(() => {});
-    }
-
-    // [HIDDEN] 레퍼럴 코드 처리 — 유저 0명 단계에서 비활성화
-    // 레퍼럴 시스템 활성화 시 registerReferral, isSelfReferral import 복원 필요
-
-    // 4) 오래된 캐시 정리
+    // 오래된 캐시 정리
     CacheUtils.cleanupOldCache();
     track('page_view', { category: 'economy' });
     reportWebVitals();
@@ -156,25 +116,7 @@ export default function Home() {
       const now = new Date(Date.now() + 9 * 3600 * 1000).toISOString().split('T')[0];
       if (lastKnownDate !== now) {
         lastKnownDate = now;
-        // New day — clear all and reload + renew tokens
         setBriefings({});
-        if (CacheUtils.isInTrialPeriod() || CacheUtils.isPremiumUnlocked() || CacheUtils.isSubscribed()) {
-          fetch('/api/unlock', { method: 'POST' })
-            .then(() => fetch('/api/briefing?action=unlock'))
-            .then((r) => r.json())
-            .then((d) => {
-              const tokens = d.data?.tokens as Record<string, string> | undefined;
-              if (tokens) {
-                CacheUtils.setPremiumUnlocked(tokens);
-                // 새 토큰으로 재요청 위해 캐시 클리어
-                ['economy', 'investment', 'lifestyle'].forEach((cat) =>
-                  CacheUtils.clearBriefing(cat, now),
-                );
-                setBriefings({});
-              }
-            })
-            .catch(() => {});
-        }
       }
     };
 
@@ -438,23 +380,7 @@ export default function Home() {
             </div>
             <div className="flex items-center gap-2">
               <ThemeToggle />
-              {/* iOS native: no trial/PRO badge (App Store compliance — all content free) */}
-              {!isNative && isPremiumUnlocked && (() => {
-                const trialDays = CacheUtils.getTrialDaysRemaining();
-                const inTrial = CacheUtils.isInTrialPeriod();
-                if (inTrial && trialDays > 0) {
-                  return (
-                    <span className="rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 px-3 py-1 text-xs font-medium">
-                      체험 D-{trialDays}
-                    </span>
-                  );
-                }
-                return (
-                  <span className="rounded-full bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-3 py-1 text-xs font-medium">
-                    PRO
-                  </span>
-                );
-              })()}
+              {/* [REMOVED] PRO/체험 D-X 배지 — 후원 모델 전환으로 제거 */}
             </div>
           </div>
           <CategoryTab
@@ -464,8 +390,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Trial period banner — hidden on iOS native (App Store compliance — all content free) */}
-      {!isNative && <TrialBanner />}
+      {/* [REMOVED] TrialBanner — 후원 모델 전환으로 체험 기간 개념 제거 */}
 
       {/* Offline mode banner */}
       {isOffline && (
@@ -542,14 +467,9 @@ export default function Home() {
               key={`${activeCategory}-${card.id}`}
               card={card}
               categoryId={activeCategory}
-              isPaywalled={isNative ? false : card.number > 1}
-              isPremiumUnlocked={isNative ? true : isPremiumUnlocked}
-              onPaywallClick={() => {
-                // iOS native: never open paywall (App Store compliance)
-                if (isNative) return;
-                track('paywall_click');
-                setShowPaywallModal(true);
-              }}
+              isPaywalled={false}
+              isPremiumUnlocked={true}
+              onPaywallClick={() => { /* 후원 모델: paywall 없음 */ }}
               delay={index * 80}
             />
           ))
@@ -640,14 +560,15 @@ export default function Home() {
 
       {/* Footer with donation — extra bottom padding for iOS home indicator */}
       <footer className="mx-auto max-w-lg px-4 pt-4 space-y-3" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
-        {DONATION_URL && !isNative && !CacheUtils.isInTrialPeriod() && (
+        {DONATION_URL && !isNative && (
           <a
             href={DONATION_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="block w-full text-center rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1c1c1e] text-gray-600 dark:text-gray-300 py-3 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+            onClick={() => track('donate_click', { source: 'footer' })}
+            className="block w-full text-center rounded-xl bg-amber-500 hover:bg-amber-600 text-white py-3.5 text-sm font-semibold shadow-sm transition active:scale-[0.99]"
           >
-            ☕ 마음에 드셨다면 커피 한 잔 사주세요
+            ☕ 매일 도움 됐다면, 개발자에게 커피 한 잔
           </a>
         )}
         {/* [HIDDEN] ReferralCard — 유저 0명 단계에서 레퍼럴 무의미 */}
@@ -667,48 +588,11 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* Paywall modal — hidden on iOS native (App Store compliance) */}
-      <Suspense fallback={null}>
-      {!isNative && (
-      <PaywallOverlay
-        isVisible={showPaywallModal}
-        onUnlock={async () => {
-          // 서버에서 HMAC 서명된 unlock 토큰 발급
-          try {
-            const res = await fetch('/api/briefing?action=unlock');
-            const json = await res.json();
-            const tokens = json.data?.tokens as Record<string, string> | undefined;
-
-            // localStorage에 날짜 + 서버 토큰 저장
-            CacheUtils.setPremiumUnlocked(tokens);
-          } catch {
-            // 토큰 발급 실패 시에도 UI는 unlock (서버 게이팅은 유지됨)
-            CacheUtils.setPremiumUnlocked();
-          }
-
-          // 서버에 unlock 상태 기록 (Redis 저장)
-          fetch('/api/unlock', { method: 'POST' }).catch(() => {});
-          track('unlock');
-          setIsPremiumUnlocked(true);
-          setShowPaywallModal(false);
-
-          // 기존 캐시 클리어 후 unlock 토큰으로 재요청
-          setBriefings({});
-          const todayDate = CacheUtils.getTodayDate();
-          CacheUtils.clearBriefing('economy', todayDate);
-          CacheUtils.clearBriefing('investment', todayDate);
-          CacheUtils.clearBriefing('lifestyle', todayDate);
-        }}
-        onClose={() => setShowPaywallModal(false)}
-        donationUrl={isNative ? undefined : (DONATION_URL || undefined)}
-      />
-      )}
-
-      {/* [HIDDEN] NotificationPrompt — VAPID 미구현, 유저 0명 */}
-      {/* [HIDDEN] EmailCollector — 뉴스레터 발송 미구현 */}
+      {/* [REMOVED] Paywall modal — 후원 모델 전환으로 제거 */}
 
       {/* PWA install prompt — 리텐션에 유용하므로 유지 */}
-      <InstallPrompt />
+      <Suspense fallback={null}>
+        <InstallPrompt />
       </Suspense>
     </div>
     </PullToRefresh>
