@@ -256,6 +256,7 @@ export async function generateBriefing(
           type: 'web_search_20250305',
           name: 'web_search',
           allowed_domains: getAllowedDomains(category),
+          max_uses: 3,
         },
       ],
       messages: [

@@ -20,7 +20,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().split('T')[0];
-  const categories = ['economy', 'investment', 'lifestyle'];
+  // 출시 전 비용 절감: economy만 실시간 생성, investment/lifestyle은 evergreen fallback 서빙
+  const categories = ['economy'];
   const results: Record<string, string> = {};
   const startTime = Date.now();
 
