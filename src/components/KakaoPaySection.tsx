@@ -5,7 +5,6 @@ import { isNativePlatform } from '@/lib/native-push';
 
 const DONATION_URL = 'https://qr.kakaopay.com/Fa0mKvPtZ';
 
-/** KakaoPay donation section — hidden on native iOS (App Store compliance) */
 export default function KakaoPaySection() {
   const [isNative, setIsNative] = useState(false);
 
@@ -13,7 +12,20 @@ export default function KakaoPaySection() {
     setIsNative(isNativePlatform());
   }, []);
 
-  if (isNative) return null;
+  if (isNative) {
+    return (
+      <div className="text-center my-8">
+        <a
+          href={DONATION_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block text-sm text-gray-500 dark:text-gray-400 underline underline-offset-4 decoration-gray-300 dark:decoration-gray-600"
+        >
+          웹에서 개발자 응원하기 →
+        </a>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6 mb-8">

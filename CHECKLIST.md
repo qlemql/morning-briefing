@@ -1,8 +1,13 @@
-# Launch Checklist (데드라인: 2026-05-24, D-37)
+# Launch Checklist (데드라인: 2026-05-24)
 
 ## 💡 비즈니스 모델: 후원 (Donation-First)
 구독 모델 → 후원 모델 전환 (2026-04-17). 사업자등록 블로커 해제, App Store 리젝 리스크 제거.
 DAU 200+ & 리텐션 30%+ 검증 후 정식 구독 모델로 재전환 예정.
+
+## 🍎 App Store 심사 기록
+- **2026-04-16 제출 → 거절 (Guideline 2.1(a) App Completeness)**: 앱 아이콘이 placeholder로 판정됨 (카드 안 회색 가로선 = Lorem Ipsum 패턴)
+- **2026-04-19 수정 완료**: 일출 심볼 기반 리디자인 (네이비→골든 그라데이션 + 산 실루엣), placeholder 요소 전부 제거, RGB 플래튼(알파 채널 없음)
+- **재제출 필요**: Xcode clean build → Archive → App Store Connect 업로드
 
 ## 🔴 블로커 — 모두 해결됨
 - [x] Upstash Redis 세팅 ✅
