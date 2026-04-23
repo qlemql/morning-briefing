@@ -1,4 +1,4 @@
-const CACHE_NAME = 'morning-briefing-v9';
+const CACHE_NAME = 'morning-briefing-v10';
 const STATIC_ASSETS = [
   '/',
   '/privacy',
@@ -118,25 +118,25 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Pages & static: stale-while-revalidate with offline fallback
+  // Pages & JS/CSS: network-first so deploys are picked up immediately.
+  // Cache used only as offline fallback.
   event.respondWith(
-    caches.match(request).then((cached) => {
-      const networkFetch = fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
-        .catch(() => {
-          // Network failed and no cache → show offline page for navigation requests
+    fetch(request)
+      .then((response) => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+        }
+        return response;
+      })
+      .catch(() =>
+        caches.match(request).then((cached) => {
+          if (cached) return cached;
           if (request.mode === 'navigate') {
             return caches.match('/offline.html');
           }
           return new Response('', { status: 503 });
-        });
-      return cached || networkFetch;
-    })
+        })
+      )
   );
 });

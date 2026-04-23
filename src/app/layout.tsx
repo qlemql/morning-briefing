@@ -157,8 +157,18 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                  navigator.serviceWorker.register('/sw.js').catch(() => {});
+                if (navigator.serviceWorker.controller) {
+                  var __swReloading = false;
+                  navigator.serviceWorker.addEventListener('controllerchange', function() {
+                    if (__swReloading) return;
+                    __swReloading = true;
+                    window.location.reload();
+                  });
+                }
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+                    .then(function(reg) { reg.update().catch(function(){}); })
+                    .catch(function(){});
                 });
               }
               // Global error reporting
