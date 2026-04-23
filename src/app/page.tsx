@@ -86,7 +86,7 @@ export default function Home() {
     setIsNative(isNativePlatform());
   }, []);
 
-  const DONATION_URL = isNative ? '' : DONATION_URL_WEB;
+  const DONATION_URL = DONATION_URL_WEB;
 
   // Splash screen hide + badge clear on mount (native only)
   useEffect(() => {
@@ -369,7 +369,7 @@ export default function Home() {
       />
 
       {/* Header — sticky with iOS notch safe area + GPU layer for flicker prevention */}
-      <header className="sticky top-0 z-40 bg-white dark:bg-[#1c1c1e] border-b border-gray-200/80 dark:border-gray-800 ios-safe-top will-change-transform" style={{ transform: 'translateZ(0)' }}>
+      <header className="sticky top-0 z-40 bg-white dark:bg-[#1c1c1e] border-b border-gray-200/80 dark:border-gray-800 will-change-transform" style={{ transform: 'translateZ(0)' }}>
         <div className="mx-auto max-w-lg px-4 pb-3" style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -570,6 +570,19 @@ export default function Home() {
           >
             ☕ 매일 도움 됐다면, 개발자에게 커피 한 잔
           </a>
+        )}
+        {DONATION_URL && isNative && (
+          <div className="text-center pt-2">
+            <a
+              href={DONATION_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => track('donate_click', { source: 'footer_ios' })}
+              className="inline-block text-sm text-gray-500 dark:text-gray-400 underline underline-offset-4 decoration-gray-300 dark:decoration-gray-600"
+            >
+              웹에서 개발자 응원하기 →
+            </a>
+          </div>
         )}
         {/* [HIDDEN] ReferralCard — 유저 0명 단계에서 레퍼럴 무의미 */}
         <div className="text-center text-xs text-gray-400 dark:text-gray-500 mt-4 space-y-1">
