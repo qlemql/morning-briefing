@@ -38,8 +38,14 @@ const ECONOMY_SYSTEM_PROMPT = `당신은 한국 경제 및 시사 전문가입�
 - 출처(source)는 해당 내용이 나온 언론사/웹사이트를 기재
 - 추측/정치적 편향/개인 의견 금지
 
+★ 초심자 해설 필수 - 모든 카드에 beginnerExplanation 객체 작성:
+- tldr: 본문을 30자 이내로 요약. 중학생도 이해할 수 있는 톤. 비유 환영. (예: "미국이 금리를 안 내려서 한국 주식이 흔들렸어요")
+- glossary: 본문에 등장한 어려운 용어를 0~5개 풀이. 각 풀이는 40자 이내, 1줄. 어려운 용어가 없으면 빈 배열 [].
+  (예: term="FOMC", explain="미국 중앙은행이 금리를 결정하는 회의")
+- whyItMatters: "이게 나/우리 일상에 왜 중요한가?" 2~3문장. 추상 금지, 구체적 인과관계로.
+
 다음 JSON만 출력. 마크다운이나 추가 설명 금지:
-{"cards":[{"id":"card_1","number":1,"title":"제목","content":"내용","summary":"요약","type":"오늘의핵심","source":"언론사명","sourceUrl":"https://원문URL"},{"id":"card_2","number":2,"title":"제목","content":"내용","summary":"요약","type":"영향분석","source":"언론사명","sourceUrl":"https://원문URL"},{"id":"card_3","number":3,"title":"제목","content":"내용","summary":"요약","type":"실전인사이트","source":"언론사명","sourceUrl":"https://원문URL"}]}`;
+{"cards":[{"id":"card_1","number":1,"title":"제목","content":"내용","summary":"요약","type":"오늘의핵심","source":"언론사명","sourceUrl":"https://원문URL","beginnerExplanation":{"tldr":"한 마디로 요약","glossary":[{"term":"용어","explain":"풀이"}],"whyItMatters":"왜 나에게 중요한가"}},{"id":"card_2","number":2,"title":"제목","content":"내용","summary":"요약","type":"영향분석","source":"언론사명","sourceUrl":"https://원문URL","beginnerExplanation":{"tldr":"한 마디로 요약","glossary":[{"term":"용어","explain":"풀이"}],"whyItMatters":"왜 나에게 중요한가"}},{"id":"card_3","number":3,"title":"제목","content":"내용","summary":"요약","type":"실전인사이트","source":"언론사명","sourceUrl":"https://원문URL","beginnerExplanation":{"tldr":"한 마디로 요약","glossary":[{"term":"용어","explain":"풀이"}],"whyItMatters":"왜 나에게 중요한가"}}]}`;
 
 const INVESTMENT_SYSTEM_PROMPT = `당신은 한국 주식시장 및 글로벌 투자 전문가입니다. 매일 아침 주식시장 동향, 투자 기회, 관련 자산군 분석을 제공합니다.
 
@@ -67,8 +73,14 @@ const INVESTMENT_SYSTEM_PROMPT = `당신은 한국 주식시장 및 글로벌 �
 - 출처(source)는 해당 내용이 나온 언론사/거래소를 기재
 - 투자 권유 금지 ("~을 사세요" 금지), 근거 없는 예측 금지. 하지만 "주목할 만하다", "모니터링이 필요하다" 정도의 표현은 가능
 
+★ 초심자 해설 필수 - 모든 카드에 beginnerExplanation 객체 작성:
+- tldr: 본문을 30자 이내로 요약. 투자 초심자도 이해할 수 있는 톤. (예: "미국 금리가 동결돼서 한국 주식이 잠깐 흔들렸어요")
+- glossary: 본문에 등장한 투자/경제 용어를 0~5개 풀이. 각 풀이는 40자 이내. 없으면 [].
+  (예: term="PER", explain="주가가 순이익의 몇 배인지 보여주는 지표")
+- whyItMatters: "이게 내 투자에 왜 중요한가?" 2~3문장. 구체적 영향 경로로.
+
 다음 JSON만 출력. 마크다운이나 추가 설명 금지:
-{"cards":[{"id":"card_1","number":1,"title":"제목","content":"내용","summary":"요약","type":"오늘의핵심","source":"언론사명","sourceUrl":"https://원문URL"},{"id":"card_2","number":2,"title":"제목","content":"내용","summary":"요약","type":"영향분석","source":"언론사명","sourceUrl":"https://원문URL"},{"id":"card_3","number":3,"title":"제목","content":"내용","summary":"요약","type":"실전인사이트","source":"언론사명","sourceUrl":"https://원문URL"}]}`;
+{"cards":[{"id":"card_1","number":1,"title":"제목","content":"내용","summary":"요약","type":"오늘의핵심","source":"언론사명","sourceUrl":"https://원문URL","beginnerExplanation":{"tldr":"한 마디로 요약","glossary":[{"term":"용어","explain":"풀이"}],"whyItMatters":"왜 나에게 중요한가"}},{"id":"card_2","number":2,"title":"제목","content":"내용","summary":"요약","type":"영향분석","source":"언론사명","sourceUrl":"https://원문URL","beginnerExplanation":{"tldr":"한 마디로 요약","glossary":[{"term":"용어","explain":"풀이"}],"whyItMatters":"왜 나에게 중요한가"}},{"id":"card_3","number":3,"title":"제목","content":"내용","summary":"요약","type":"실전인사이트","source":"언론사명","sourceUrl":"https://원문URL","beginnerExplanation":{"tldr":"한 마디로 요약","glossary":[{"term":"용어","explain":"풀이"}],"whyItMatters":"왜 나에게 중요한가"}}]}`;
 
 const LIFESTYLE_SYSTEM_PROMPT = `당신은 생활 트렌드 및 테크 전문 에디터입니다. 매일 아침 사람들의 일상에 영향을 미치는 IT/테크, 소비, 건강, 문화 트렌드를 분석합니다.
 
@@ -96,8 +108,14 @@ const LIFESTYLE_SYSTEM_PROMPT = `당신은 생활 트렌드 및 테크 전문 �
 - 출처(source)는 해당 내용이 나온 미디어/서비스를 기재
 - 광고성 내용 금지, 중립적 시각 유지
 
+★ 초심자 해설 필수 - 모든 카드에 beginnerExplanation 객체 작성:
+- tldr: 본문을 30자 이내로 요약. 누구나 이해할 수 있는 친근한 톤. (예: "이 앱이 자동으로 영수증을 스캔해줘서 가계부 쓰기 편해졌어요")
+- glossary: 본문에 등장한 IT/테크/생활 용어를 0~5개 풀이. 각 풀이는 40자 이내. 없으면 [].
+  (예: term="OTT", explain="인터넷으로 영상을 보는 서비스 (넷플릭스 같은)")
+- whyItMatters: "이게 내 일상에 왜 중요한가?" 2~3문장. 구체적 변화로.
+
 다음 JSON만 출력. 마크다운이나 추가 설명 금지:
-{"cards":[{"id":"card_1","number":1,"title":"제목","content":"내용","summary":"요약","type":"오늘의핵심","source":"언론사명","sourceUrl":"https://원문URL"},{"id":"card_2","number":2,"title":"제목","content":"내용","summary":"요약","type":"영향분석","source":"언론사명","sourceUrl":"https://원문URL"},{"id":"card_3","number":3,"title":"제목","content":"내용","summary":"요약","type":"실전인사이트","source":"언론사명","sourceUrl":"https://원문URL"}]}`;
+{"cards":[{"id":"card_1","number":1,"title":"제목","content":"내용","summary":"요약","type":"오늘의핵심","source":"언론사명","sourceUrl":"https://원문URL","beginnerExplanation":{"tldr":"한 마디로 요약","glossary":[{"term":"용어","explain":"풀이"}],"whyItMatters":"왜 나에게 중요한가"}},{"id":"card_2","number":2,"title":"제목","content":"내용","summary":"요약","type":"영향분석","source":"언론사명","sourceUrl":"https://원문URL","beginnerExplanation":{"tldr":"한 마디로 요약","glossary":[{"term":"용어","explain":"풀이"}],"whyItMatters":"왜 나에게 중요한가"}},{"id":"card_3","number":3,"title":"제목","content":"내용","summary":"요약","type":"실전인사이트","source":"언론사명","sourceUrl":"https://원문URL","beginnerExplanation":{"tldr":"한 마디로 요약","glossary":[{"term":"용어","explain":"풀이"}],"whyItMatters":"왜 나에게 중요한가"}}]}`;
 
 const SYSTEM_PROMPTS: Record<string, string> = {
   economy: ECONOMY_SYSTEM_PROMPT,

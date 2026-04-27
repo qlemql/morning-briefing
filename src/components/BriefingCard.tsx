@@ -4,10 +4,11 @@ import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { BriefingCard as BriefingCardType } from '@/lib/types';
 import { CARD_TYPE_LABELS, getCategoryById } from '@/constants';
 import { track } from '@/lib/track';
-import { hapticLight } from '@/lib/haptic';
+import { hapticLight, hapticMedium } from '@/lib/haptic';
 import { showToast } from '@/components/Toast';
 import * as tts from '@/lib/tts';
 import { nativeShare } from '@/lib/native-share';
+import CardBack from '@/components/CardBack';
 
 interface BriefingCardProps {
   card: BriefingCardType;
@@ -48,6 +49,13 @@ const PauseIcon = () => (
 const StopIcon = () => (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
     <rect x="4" y="4" width="16" height="16" rx="2" />
+  </svg>
+);
+
+const FlipIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M21 12a9 9 0 11-3-6.7" />
+    <polyline points="21 4 21 9 16 9" />
   </svg>
 );
 
@@ -121,9 +129,12 @@ export default memo(function BriefingCard({
   const [entered, setEntered] = useState(delay === 0);
   const [showCopied, setShowCopied] = useState(false);
   const [hasRead, setHasRead] = useState(false);
+  const [flipped, setFlipped] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLElement>(null);
   const [contentHeight, setContentHeight] = useState<number | undefined>(undefined);
+  const hasBeginnerExplanation = !!card.beginnerExplanation;
+  const canFlip = hasBeginnerExplanation && !(isPaywalled && !isPremiumUnlocked);
 
   const ttsText = `${card.title}. ${card.content}`;
   const { state: ttsState, supported: ttsSupported, handleTts, handleStop } = useTts(ttsText, card.id);
@@ -168,6 +179,22 @@ export default memo(function BriefingCard({
     }
   }, [toggleExpand]);
 
+  const toggleFlip = useCallback((e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!canFlip) return;
+    hapticMedium();
+    setFlipped((prev) => {
+      const next = !prev;
+      // 뒷면으로 갈 때 앞면 본문은 펼쳐둬서 뒤집어진 카드 컨테이너 높이 확보
+      if (next && !expanded) {
+        setExpanded(true);
+        setHasRead(true);
+      }
+      track(next ? 'card_flip_to_back' : 'card_flip_to_front', { card: card.id });
+      return next;
+    });
+  }, [canFlip, expanded, card.id]);
+
   useEffect(() => {
     if (delay === 0) return;
     const t = setTimeout(() => setEntered(true), delay);
@@ -189,12 +216,13 @@ export default memo(function BriefingCard({
     return (
       <article
         ref={cardRef}
-        className={`relative rounded-2xl overflow-hidden shadow-lg transition-all duration-400 ease-out ${
+        className={`relative shadow-lg flip-perspective transition-all duration-400 ease-out ${
           entered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
         }`}
         aria-label={`${typeInfo.label}: ${card.title}`}
       >
-        <div className="card-gradient-hero">
+        <div className={`flip-inner ${flipped ? 'is-flipped' : ''}`}>
+        <div className="flip-face rounded-2xl overflow-hidden card-gradient-hero">
           <div
             className="p-6 cursor-pointer active:scale-[0.98] transition-transform"
             onClick={toggleExpand}
@@ -210,6 +238,16 @@ export default memo(function BriefingCard({
                 {typeInfo.icon} {typeInfo.label}
               </span>
               <span className="text-emerald-400 text-xs font-semibold tracking-wide">FREE</span>
+              {canFlip && (
+                <button
+                  onClick={toggleFlip}
+                  className="ml-auto inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/12 hover:bg-white/20 text-white/85 text-[11px] font-semibold transition-colors active:scale-95"
+                  aria-label="쉽게 보기 (카드 뒤집기)"
+                >
+                  <FlipIcon />
+                  쉽게
+                </button>
+              )}
             </div>
 
             {/* Title */}
@@ -306,6 +344,17 @@ export default memo(function BriefingCard({
             </div>
           </div>
         </div>
+        {canFlip && card.beginnerExplanation && (
+          <div className="flip-face flip-face-back rounded-2xl overflow-hidden card-gradient-hero">
+            <CardBack
+              explanation={card.beginnerExplanation}
+              isHero={true}
+              onClose={() => toggleFlip()}
+              cardId={card.id}
+            />
+          </div>
+        )}
+        </div>
       </article>
     );
   }
@@ -314,11 +363,13 @@ export default memo(function BriefingCard({
   return (
     <article
       ref={cardRef}
-      className={`relative rounded-2xl bg-white dark:bg-[#1c1c1e] overflow-hidden shadow-sm transition-all duration-400 ease-out ${
+      className={`relative shadow-sm flip-perspective transition-all duration-400 ease-out ${
         entered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-      } ${shouldBlur ? '' : 'border border-gray-100 dark:border-gray-800'}`}
+      }`}
       aria-label={`${typeInfo.label}: ${card.title}`}
     >
+      <div className={`flip-inner ${flipped ? 'is-flipped' : ''}`}>
+      <div className={`flip-face rounded-2xl bg-white dark:bg-[#1c1c1e] overflow-hidden ${shouldBlur ? '' : 'border border-gray-100 dark:border-gray-800'}`}>
       <div
         className={`p-5 ${!shouldBlur ? 'cursor-pointer active:bg-gray-50/50 dark:active:bg-gray-800/50 active:scale-[0.99] transition-all' : ''}`}
         onClick={() => !shouldBlur && toggleExpand()}
@@ -342,6 +393,16 @@ export default memo(function BriefingCard({
               </span>
               {shouldBlur && (
                 <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">PRO</span>
+              )}
+              {canFlip && (
+                <button
+                  onClick={toggleFlip}
+                  className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 text-[11px] font-semibold transition-colors active:scale-95"
+                  aria-label="쉽게 보기 (카드 뒤집기)"
+                >
+                  <FlipIcon />
+                  쉽게
+                </button>
               )}
             </div>
 
@@ -466,6 +527,18 @@ export default memo(function BriefingCard({
           </div>
         </div>
       )}
+      </div>
+      {canFlip && card.beginnerExplanation && (
+        <div className="flip-face flip-face-back rounded-2xl overflow-hidden bg-amber-50 dark:bg-[#1c1c1e] border border-amber-200 dark:border-amber-900/40">
+          <CardBack
+            explanation={card.beginnerExplanation}
+            isHero={false}
+            onClose={() => toggleFlip()}
+            cardId={card.id}
+          />
+        </div>
+      )}
+      </div>
     </article>
   );
 });

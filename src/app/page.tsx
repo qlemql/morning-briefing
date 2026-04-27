@@ -17,6 +17,8 @@ const UpdateBanner = lazy(() => import('@/components/UpdateBanner'));
 const MarketSnapshot = lazy(() => import('@/components/MarketSnapshot'));
 const DailyTerm = lazy(() => import('@/components/DailyTerm'));
 const DailyQuiz = lazy(() => import('@/components/DailyQuiz'));
+const OnboardingTutorial = lazy(() => import('@/components/OnboardingTutorial'));
+const NotificationSettings = lazy(() => import('@/components/NotificationSettings'));
 // [HIDDEN] 아래 컴포넌트들은 유저 확보 후 활성화 예정
 // NotificationPrompt, EmailCollector, WatchlistSection, ReferralCard
 
@@ -558,6 +560,13 @@ export default function Home() {
         )}
       </main>
 
+      {/* 알림 설정 — main과 footer 사이에 배치 */}
+      <div className="mx-auto max-w-lg px-4">
+        <Suspense fallback={null}>
+          <NotificationSettings />
+        </Suspense>
+      </div>
+
       {/* Footer with donation — extra bottom padding for iOS home indicator */}
       <footer className="mx-auto max-w-lg px-4 pt-4 space-y-3" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
         {DONATION_URL && !isNative && (
@@ -596,6 +605,16 @@ export default function Home() {
               개인정보처리방침
             </a>
             {' · '}
+            <button
+              onClick={() => {
+                try { localStorage.removeItem('mb_onboarded_v1'); } catch {}
+                window.location.reload();
+              }}
+              className="hover:text-gray-500 transition-colors underline-offset-2 hover:underline"
+            >
+              튜토리얼 다시 보기
+            </button>
+            {' · '}
             <span>{VERSION_LABEL}</span>
           </p>
         </div>
@@ -606,6 +625,11 @@ export default function Home() {
       {/* PWA install prompt — 리텐션에 유용하므로 유지 */}
       <Suspense fallback={null}>
         <InstallPrompt />
+      </Suspense>
+
+      {/* 온보딩 튜토리얼 — 첫 방문 시에만 노출 (localStorage gate) */}
+      <Suspense fallback={null}>
+        <OnboardingTutorial />
       </Suspense>
     </div>
     </PullToRefresh>

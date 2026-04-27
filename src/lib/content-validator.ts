@@ -84,6 +84,26 @@ function validateCard(card: BriefingCard, index: number, errors: string[], warni
   } else {
     warnings.push(`${label}: sourceUrl 누락`);
   }
+
+  // 초심자 해설 검증 (있을 때만 — 구버전 호환)
+  if (card.beginnerExplanation) {
+    const be = card.beginnerExplanation;
+    if (!be.tldr || be.tldr.trim() === '') {
+      warnings.push(`${label}: beginnerExplanation.tldr 누락`);
+    } else if (be.tldr.length > 50) {
+      warnings.push(`${label}: tldr ${be.tldr.length}자 (권장 30자, 최대 50자)`);
+    }
+    if (!Array.isArray(be.glossary)) {
+      warnings.push(`${label}: glossary가 배열이 아님`);
+    } else if (be.glossary.length > 5) {
+      warnings.push(`${label}: glossary ${be.glossary.length}개 (최대 5개)`);
+    }
+    if (!be.whyItMatters || be.whyItMatters.trim() === '') {
+      warnings.push(`${label}: whyItMatters 누락`);
+    }
+  } else {
+    warnings.push(`${label}: beginnerExplanation 누락 (초심자 해설 없음)`);
+  }
 }
 
 /**
