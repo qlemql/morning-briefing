@@ -45,3 +45,10 @@ HANDOFF.md
 
 # Capacitor iOS - Pods managed by CocoaPods
 ios/App/Pods/
+
+# App Store Connect API Key (절대 커밋 금지)
+*.p8
+.appstoreconnect/
+
+# iOS build artifacts
+ios/App/build/
