@@ -9,8 +9,11 @@
  */
 
 import { BriefingCategory } from './types';
-import { kvGet, kvSet, isRedisConfigured } from './kv';
+import { kvGet, kvSet, kvSadd, kvSmembers, isRedisConfigured } from './kv';
 import { getEvergreenBriefing } from '@/data/evergreen';
+
+// SEO/장기 archive 보관 기간: 365일
+const ARCHIVE_TTL_SECONDS = 365 * 24 * 60 * 60;
 
 interface CacheEntry {
   data: BriefingCategory;
@@ -89,11 +92,18 @@ export const ServerCache = {
         this.set(category, date, result);
         pendingRequests.delete(key);
 
-        // Redis에도 저장 (24시간 TTL)
+        // Redis 저장: 단기 캐시(24h) + 장기 archive(365d) + 카테고리별 인덱스
         if (isRedisConfigured()) {
           try {
-            const redisKey = `mb:briefing:${category}:${date}`;
-            await kvSet(redisKey, JSON.stringify(result), 86400);
+            const briefingKey = `mb:briefing:${category}:${date}`;
+            await kvSet(briefingKey, JSON.stringify(result), 86400);
+
+            // SEO용 장기 archive (365일 보관)
+            const archiveKey = `mb:archive:${category}:${date}`;
+            await kvSet(archiveKey, JSON.stringify(result), ARCHIVE_TTL_SECONDS);
+
+            // 카테고리별 archive 날짜 인덱스 (목록 페이지용)
+            await kvSadd(`mb:archive_dates:${category}`, date);
           } catch {
             // Redis 저장 실패해도 in-memory 캐시는 유지
           }
@@ -154,6 +164,41 @@ export const ServerCache = {
 
     // evergreen도 없는 경우 (있을 수 없지만 안전장치)
     throw new Error(`No cached briefing and no evergreen fallback for ${category}`);
+  },
+
+  /**
+   * Archive 조회 — SEO용 장기 보관 데이터 (365일)
+   * 단기 캐시에 없으면 archive 키 fallback. 정적 페이지(/archive/[date])용.
+   */
+  async getArchive(category: string, date: string): Promise<BriefingCategory | null> {
+    if (!isRedisConfigured()) return null;
+    try {
+      const archiveKey = `mb:archive:${category}:${date}`;
+      const raw = await kvGet(archiveKey);
+      if (raw) return JSON.parse(raw) as BriefingCategory;
+      // Fallback: 단기 캐시 키 (오늘 데이터의 경우 archive 저장 전일 수 있음)
+      const briefingKey = `mb:briefing:${category}:${date}`;
+      const briefingRaw = await kvGet(briefingKey);
+      if (briefingRaw) return JSON.parse(briefingRaw) as BriefingCategory;
+    } catch (err) {
+      console.warn('[Cache] getArchive failed:', err);
+    }
+    return null;
+  },
+
+  /**
+   * Archive 목록 조회 — 최신순
+   * 결과: ['2026-04-27', '2026-04-26', ...] (최대 limit개)
+   */
+  async listArchiveDates(category: string, limit: number = 30): Promise<string[]> {
+    if (!isRedisConfigured()) return [];
+    try {
+      const dates = await kvSmembers(`mb:archive_dates:${category}`);
+      return dates.sort((a, b) => b.localeCompare(a)).slice(0, limit);
+    } catch (err) {
+      console.warn('[Cache] listArchiveDates failed:', err);
+      return [];
+    }
   },
 
   /**

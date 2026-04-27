@@ -597,6 +597,10 @@ export default function Home() {
         <div className="text-center text-xs text-gray-400 dark:text-gray-500 mt-4 space-y-1">
           <p>© 2026 아침 브리핑 · AI가 매일 아침 정리하는 뉴스</p>
           <p>
+            <a href="/archive" className="hover:text-gray-500 transition-colors">
+              지난 브리핑
+            </a>
+            {' · '}
             <a href="mailto:thbabu2@gmail.com" className="hover:text-gray-500 transition-colors">
               문의
             </a>
@@ -612,7 +616,7 @@ export default function Home() {
               }}
               className="hover:text-gray-500 transition-colors underline-offset-2 hover:underline"
             >
-              튜토리얼 다시 보기
+              튜토리얼
             </button>
             {' · '}
             <span>{VERSION_LABEL}</span>
