@@ -4,8 +4,11 @@ import { useState, useEffect, useCallback } from 'react';
 
 interface BudgetData {
   today: {
-    calls: number;
-    estimatedCostCents: number;
+    spentCents: number;
+    budgetCents: number;
+  };
+  month?: {
+    spentCents: number;
     budgetCents: number;
   };
 }
@@ -227,8 +230,8 @@ export default function AdminPage() {
   }
 
   const budget = analytics?.budget?.today;
-  const budgetPct = budget
-    ? Math.min(100, Math.round((budget.estimatedCostCents / budget.budgetCents) * 100))
+  const budgetPct = budget && budget.budgetCents > 0
+    ? Math.min(100, Math.round((budget.spentCents / budget.budgetCents) * 100))
     : 0;
 
   return (
@@ -399,7 +402,12 @@ export default function AdminPage() {
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-bold text-gray-900 dark:text-gray-100">API 예산</h2>
               <span className="text-xs text-gray-500 dark:text-gray-400">
-                오늘 {budget.calls}회 호출 · ~${(budget.estimatedCostCents / 100).toFixed(2)} / ${(budget.budgetCents / 100).toFixed(2)}
+                오늘 ~${(budget.spentCents / 100).toFixed(2)} / ${(budget.budgetCents / 100).toFixed(2)}
+                {analytics?.budget?.month && (
+                  <span className="ml-2 text-gray-400 dark:text-gray-500">
+                    · 월 ${(analytics.budget.month.spentCents / 100).toFixed(2)}/${(analytics.budget.month.budgetCents / 100).toFixed(2)}
+                  </span>
+                )}
               </span>
             </div>
             <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3 overflow-hidden">
@@ -411,7 +419,7 @@ export default function AdminPage() {
               />
             </div>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-              {budgetPct}% 사용 · 남은 호출 ~{Math.max(0, Math.floor((budget.budgetCents - budget.estimatedCostCents) / 3))}회
+              {budgetPct}% 사용 · 남은 ~${Math.max(0, (budget.budgetCents - budget.spentCents) / 100).toFixed(2)}
             </p>
           </div>
         )}
