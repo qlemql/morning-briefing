@@ -91,7 +91,9 @@ export function getSavedTime(): { hour: number; minute: number } | null {
     const v = localStorage.getItem(NOTIFICATION_TIME_KEY);
     if (!v) return null;
     const [h, m] = v.split(':').map((s) => parseInt(s, 10));
+    // 손상된 localStorage 값 방어: 범위 밖이면 null
     if (Number.isNaN(h) || Number.isNaN(m)) return null;
+    if (h < 0 || h > 23 || m < 0 || m > 59) return null;
     return { hour: h, minute: m };
   } catch {
     return null;

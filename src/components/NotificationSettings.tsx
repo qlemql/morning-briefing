@@ -119,6 +119,7 @@ export default function NotificationSettings() {
   }, [enabled, meridiem, hour12, minute]);
 
   // 시간 변경 시 자동 저장 (디바운스)
+  // enabled를 deps에 포함 → 토글 OFF 후 600ms 내 timer가 stale closure로 재예약하는 race 방지
   useEffect(() => {
     if (!enabled) return;
     const t = setTimeout(() => {
@@ -126,7 +127,7 @@ export default function NotificationSettings() {
     }, 600);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [meridiem, hour12, minute]);
+  }, [enabled, meridiem, hour12, minute]);
 
   return (
     <section className="rounded-2xl bg-white dark:bg-[#1c1c1e] border border-gray-100 dark:border-gray-800 p-5 mb-6">

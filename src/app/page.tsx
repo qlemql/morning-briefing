@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
+import Link from 'next/link';
 import CategoryTab from '@/components/CategoryTab';
 import BriefingCard from '@/components/BriefingCard';
 import CardSkeleton from '@/components/CardSkeleton';
@@ -252,7 +253,7 @@ export default function Home() {
     setLoading(true);
     setError(null);
     setSlowLoading(false);
-    // Show "still loading" after 6 seconds
+    // Show "still loading" indicator after 3 seconds
     slowTimerRef.current = setTimeout(() => setSlowLoading(true), 3000);
 
     try {
@@ -597,17 +598,17 @@ export default function Home() {
         <div className="text-center text-xs text-gray-400 dark:text-gray-500 mt-4 space-y-1">
           <p>© 2026 아침 브리핑 · AI가 매일 아침 정리하는 뉴스</p>
           <p>
-            <a href="/archive" className="hover:text-gray-500 transition-colors">
+            <Link href="/archive" className="hover:text-gray-500 transition-colors">
               지난 브리핑
-            </a>
+            </Link>
             {' · '}
             <a href="mailto:thbabu2@gmail.com" className="hover:text-gray-500 transition-colors">
               문의
             </a>
             {' · '}
-            <a href="/privacy" className="hover:text-gray-500 transition-colors">
+            <Link href="/privacy" className="hover:text-gray-500 transition-colors">
               개인정보처리방침
-            </a>
+            </Link>
             {' · '}
             <button
               onClick={() => {
