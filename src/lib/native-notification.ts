@@ -48,14 +48,9 @@ export async function scheduleDaily(hour: number, minute: number): Promise<boole
     // 기존 알림 취소
     await LocalNotifications.cancel({ notifications: [{ id: NOTIFICATION_ID }] });
 
-    // 다음 발송 시간 계산: 오늘 hour:minute, 이미 지났으면 내일
-    const now = new Date();
-    const fireAt = new Date();
-    fireAt.setHours(hour, minute, 0, 0);
-    if (fireAt <= now) {
-      fireAt.setDate(fireAt.getDate() + 1);
-    }
-
+    // schedule.on: 캘린더 trigger 기반 — iOS UNCalendarNotificationTrigger 사용
+    // hour/minute는 디바이스 로컬 시간으로 매칭되며 매일 자동 반복.
+    // (기존 at + repeats + every: 'day' 조합은 timezone 오프셋 버그 있음)
     await LocalNotifications.schedule({
       notifications: [
         {
@@ -63,13 +58,10 @@ export async function scheduleDaily(hour: number, minute: number): Promise<boole
           title: '☀️ 오늘의 아침 브리핑이 도착했어요',
           body: '3분 안에 오늘 꼭 알아야 할 경제·투자·생활 뉴스를 확인하세요',
           schedule: {
-            at: fireAt,
-            repeats: true,
-            every: 'day',
+            on: { hour, minute },
             allowWhileIdle: true,
           },
           sound: undefined, // 시스템 기본음
-          // iOS 잠금화면에 본문 노출 (interruption-level: time-sensitive 설정 시 더 눈에 띔)
           extra: { source: 'daily_briefing' },
         },
       ],
