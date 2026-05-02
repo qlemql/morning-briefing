@@ -1,6 +1,10 @@
 # Morning Briefing
 
+**English** · [한국어](README.ko.md)
+
 > A daily AI-generated Korean briefing app for executives, built on a shared-cache architecture that keeps API cost flat as the user base grows.
+
+📱 Available on the App Store
 
 ---
 
@@ -28,7 +32,7 @@ Result: **API cost is roughly fixed per day regardless of user count**. The 1,00
 
 **Three-tier card system.** Card 1 is free, cards 2–3 sit behind a blurred paywall — enough free value to bring users back, with a clear upgrade path.
 
-**Capacitor for iOS.** The same Next.js codebase ships as a native iOS app via Capacitor 8, with offline support, push notifications, local notifications, and badge counts through Capacitor plugins.
+**Capacitor for iOS.** The same Next.js codebase ships as a native iOS app on the App Store via Capacitor 8, with offline support, push notifications, local notifications, and badge counts through Capacitor plugins.
 
 ## Key features
 
