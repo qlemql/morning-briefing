@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Morning Briefing
 
-## Getting Started
+> A daily AI-generated Korean briefing app for executives, built on a shared-cache architecture that keeps API cost flat as the user base grows.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Why I built this
+
+My commute runs over an hour each way, twice a day. I wanted a five-minute morning read covering what actually matters — economy and investment context that makes you sharper at work — without the noise of a news feed.
+
+The hard part wasn't the UI. It was the cost model. Most LLM-powered consumer apps generate per-user content, which means API spend scales linearly with users. For a solo-funded side project, that math breaks somewhere around 50 users. I needed a different architecture before I wrote any UI.
+
+## How it works
+
+**Shared daily cache.** All users see the same briefing for a given day. Content is generated once per day per category (Economy, Investment), cached server-side, and read from `localStorage` on the client.
+
+```
+Client  → check localStorage("briefing_economy_2026-05-02")
+        → cache miss → POST /api/briefing
+        → cache hit  → render
+
+Server  → already generated today?
+        → yes → serve cached
+        → no  → call Claude → store → serve
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Result: **API cost is roughly fixed per day regardless of user count**. The 1,000th user costs the same as the first.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Three-tier card system.** Card 1 is free, cards 2–3 sit behind a blurred paywall — enough free value to bring users back, with a clear upgrade path.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Capacitor for iOS.** The same Next.js codebase ships as a native iOS app via Capacitor 8, with offline support, push notifications, local notifications, and badge counts through Capacitor plugins.
 
-## Learn More
+## Key features
 
-To learn more about Next.js, take a look at the following resources:
+- Daily refresh per category with automatic cache invalidation by date key
+- Server-side API key handling — never exposed to the client
+- Skeleton loading states + paywall blur for smooth perceived performance
+- iOS native delivery via Capacitor with offline mode and push notifications
+- Five distinct error states handled explicitly (rate limit, auth, network, server, generation)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## What I learned
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Designing the cache layer **before writing any UI** was the single most important decision in this project. I had a working interface in a few hours and a sustainable cost structure on day one. If I'd shipped per-user generation first and tried to retrofit caching later, the data model would have fought me at every step.
 
-## Deploy on Vercel
+Second lesson: a tiny paywall with one genuinely useful free card converts better than I expected. People want to see something working before they decide whether to pay — a fully blurred experience just makes them close the app.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Stack
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`Next.js 16 (App Router)` · `React 19` · `TypeScript 5` · `Tailwind CSS 4` · `Anthropic Claude API` · `Capacitor 8 (iOS)` · `Vercel`
+
+## Project structure
+
+```
+src/
+├── app/
+│   ├── layout.tsx              Root layout with Korean metadata
+│   ├── page.tsx                Home page (client component)
+│   └── api/briefing/route.ts   Server-side Claude endpoint
+├── components/
+│   ├── BriefingCard.tsx        Card display with paywall support
+│   ├── CategoryTab.tsx         Category switcher
+│   ├── CardSkeleton.tsx        Loading skeleton
+│   └── PaywallOverlay.tsx      Premium unlock modal
+├── lib/
+│   ├── claude.ts               Claude API client
+│   ├── cache.ts                localStorage utilities
+│   └── types.ts                Shared TypeScript types
+└── constants/index.ts          Categories and config
+
+ios/                            Capacitor iOS project
+public/sw.js                    Service worker for offline mode
+```
+
+---
+
+Built with Claude Code as the primary dev environment.  
+Author: [Hyun (qlemql)](https://github.com/qlemql) · taehyun_fe@naver.com
