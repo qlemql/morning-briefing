@@ -34,14 +34,17 @@ export default function ToastContainer() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed left-1/2 -translate-x-1/2 z-[60] flex flex-col gap-2 pointer-events-none" style={{ bottom: 'max(6rem, calc(5rem + env(safe-area-inset-bottom)))' }}>
+    <div
+      className="fixed left-1/2 -translate-x-1/2 z-[60] flex flex-col items-center gap-2 pointer-events-none px-4 w-full max-w-md"
+      style={{ bottom: 'max(6rem, calc(5rem + env(safe-area-inset-bottom)))' }}
+    >
       {toasts.map((t) => (
         <div
           key={t.id}
-          className="bg-gray-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg animate-[fadeSlideUp_0.25s_ease-out]"
+          className="bg-gray-900 text-white text-[13px] px-4 py-2.5 rounded-xl shadow-lg animate-[fadeSlideUp_0.25s_ease-out] inline-flex items-center gap-1.5 max-w-full text-center leading-snug"
         >
-          {t.icon && <span className="mr-1.5">{t.icon}</span>}
-          {t.text}
+          {t.icon && <span aria-hidden="true" className="flex-shrink-0">{t.icon}</span>}
+          <span className="break-keep">{t.text}</span>
         </div>
       ))}
     </div>

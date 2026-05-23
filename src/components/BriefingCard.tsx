@@ -242,10 +242,10 @@ export default memo(function BriefingCard({
                 <button
                   onClick={toggleFlip}
                   className="ml-auto inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/12 hover:bg-white/20 text-white/85 text-[11px] font-semibold transition-colors active:scale-95"
-                  aria-label="쉽게 보기 (카드 뒤집기)"
+                  aria-label="쉬운 풀이 보기 (카드 뒤집기)"
                 >
                   <FlipIcon />
-                  쉽게
+                  쉬운 풀이
                 </button>
               )}
             </div>
@@ -398,10 +398,10 @@ export default memo(function BriefingCard({
                 <button
                   onClick={toggleFlip}
                   className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 text-[11px] font-semibold transition-colors active:scale-95"
-                  aria-label="쉽게 보기 (카드 뒤집기)"
+                  aria-label="쉬운 풀이 보기 (카드 뒤집기)"
                 >
                   <FlipIcon />
-                  쉽게
+                  쉬운 풀이
                 </button>
               )}
             </div>

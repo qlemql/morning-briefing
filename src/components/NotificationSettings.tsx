@@ -118,15 +118,16 @@ export default function NotificationSettings() {
     }
   }, [enabled, meridiem, hour12, minute]);
 
-  // 시간 변경 시 자동 저장 (디바운스)
-  // enabled를 deps에 포함 → 토글 OFF 후 600ms 내 timer가 stale closure로 재예약하는 race 방지
+  // Track unsaved changes — savedTime이 현재 입력 값과 다르면 dirty
+  const [isDirty, setIsDirty] = useState(false);
   useEffect(() => {
-    if (!enabled) return;
-    const t = setTimeout(() => {
-      handleSaveTime();
-    }, 600);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!enabled) {
+      setIsDirty(false);
+      return;
+    }
+    const saved = getSavedTime();
+    const currentH24 = to24Hour(meridiem, hour12);
+    setIsDirty(!saved || saved.hour !== currentH24 || saved.minute !== minute);
   }, [enabled, meridiem, hour12, minute]);
 
   return (
@@ -211,6 +212,17 @@ export default function NotificationSettings() {
           <p className="mt-2 text-[11px] text-red-500 dark:text-red-400">
             알림 권한이 거부됐어요. iOS 설정 → 아침 브리핑 → 알림에서 허용해주세요.
           </p>
+        )}
+
+        {/* Save button — only shows when there are unsaved changes */}
+        {enabled && isDirty && (
+          <button
+            onClick={handleSaveTime}
+            disabled={busy}
+            className="mt-3 w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white text-[13px] font-semibold transition-colors disabled:opacity-50"
+          >
+            {busy ? '저장 중…' : '저장'}
+          </button>
         )}
       </div>
     </section>

@@ -197,10 +197,13 @@ export default function Home() {
 
   // Swipe gesture tracking
   const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
   const touchEndX = useRef(0);
+  const touchEndY = useRef(0);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
   }, []);
 
   const switchCategory = useCallback((newCategory: string) => {
@@ -232,16 +235,22 @@ export default function Home() {
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     touchEndX.current = e.changedTouches[0].clientX;
-    const delta = touchStartX.current - touchEndX.current;
+    touchEndY.current = e.changedTouches[0].clientY;
+    const deltaX = touchStartX.current - touchEndX.current;
+    const deltaY = touchStartY.current - touchEndY.current;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    // Horizontal-dominant gesture only — prevent vertical scroll from triggering tab switch
+    if (absX < SWIPE_THRESHOLD || absX < absY * 1.5) return;
+
     const categoryIds = CATEGORIES.map((c) => c.id as string);
     const currentIndex = categoryIds.indexOf(activeCategory);
 
-    if (Math.abs(delta) > SWIPE_THRESHOLD) {
-      if (delta > 0 && currentIndex < categoryIds.length - 1) {
-        switchCategory(categoryIds[currentIndex + 1]);
-      } else if (delta < 0 && currentIndex > 0) {
-        switchCategory(categoryIds[currentIndex - 1]);
-      }
+    if (deltaX > 0 && currentIndex < categoryIds.length - 1) {
+      switchCategory(categoryIds[currentIndex + 1]);
+    } else if (deltaX < 0 && currentIndex > 0) {
+      switchCategory(categoryIds[currentIndex - 1]);
     }
   }, [activeCategory, switchCategory]);
 

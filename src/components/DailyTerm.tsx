@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getTodayTerm } from '@/data/daily-term';
 import type { DailyTermData } from '@/data/daily-term';
 import { track } from '@/lib/track';
@@ -23,6 +23,18 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
 
 function TermCard({ term }: { term: DailyTermData }) {
   const [expanded, setExpanded] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [contentHeight, setContentHeight] = useState<number | null>(null);
+
+  const measureHeight = useCallback(() => {
+    if (contentRef.current) {
+      setContentHeight(contentRef.current.scrollHeight);
+    }
+  }, []);
+
+  useEffect(() => {
+    measureHeight();
+  }, [expanded, measureHeight]);
 
   const toggle = useCallback(() => {
     hapticLight();
@@ -85,8 +97,10 @@ function TermCard({ term }: { term: DailyTermData }) {
       {/* Expanded detail */}
       <div
         id="term-detail"
-        className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          expanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+        ref={contentRef}
+        style={{ maxHeight: expanded ? (contentHeight ?? 1000) : 0 }}
+        className={`overflow-hidden transition-[max-height,opacity] duration-300 ease-in-out ${
+          expanded ? 'opacity-100' : 'opacity-0'
         }`}
       >
         <div className="px-5 pb-5 space-y-3">
