@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(gh:*)",
+      "Bash(bash scripts/push.sh:*)",
+      "Bash(bash scripts/handoff-to-web.sh:*)",
+      "Bash(bash scripts/handoff-from-web.sh:*)"
     ]
   }
 }
