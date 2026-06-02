@@ -167,20 +167,26 @@ interface ClaudeResponse {
 }
 
 /**
- * 3회 재시도 로직 (5초 간격)
+ * 최대 3회 시도 (5초 간격). 5xx / 429 / 네트워크 연결 오류만 재시도.
+ * (이전 버전은 retries=1이라 사실상 단 한 번만 시도했음 — 일시 장애에 그대로 실패)
  */
-async function withRetry<T>(fn: () => Promise<T>, retries = 1, delayMs = 5000): Promise<T> {
+async function withRetry<T>(fn: () => Promise<T>, retries = 3, delayMs = 5000): Promise<T> {
+  let lastError: unknown;
   for (let i = 0; i < retries; i++) {
     try {
       return await fn();
     } catch (error: unknown) {
+      lastError = error;
+      // status === undefined → 네트워크/연결 오류 (APIConnectionError 등)
       const isRetryable =
-        error instanceof Anthropic.APIError && error.status !== undefined && error.status >= 500;
+        error instanceof Anthropic.APIError &&
+        (error.status === undefined || error.status >= 500 || error.status === 429);
       if (!isRetryable || i === retries - 1) throw error;
+      console.warn(`[Claude] Retryable error (attempt ${i + 1}/${retries}) — retrying in ${delayMs}ms`);
       await new Promise((r) => setTimeout(r, delayMs));
     }
   }
-  throw new Error('Retry exhausted');
+  throw lastError instanceof Error ? lastError : new Error('Retry exhausted');
 }
 
 /**

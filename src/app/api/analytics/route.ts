@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { trackPageView, trackEvent, getStats, getAllStats } from '@/lib/analytics';
 import { getBudgetStatus } from '@/lib/budget';
+import { getCronStatus } from '@/lib/cron-status';
 
 /**
  * POST /api/analytics — track events from client
@@ -61,13 +62,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   const date = request.nextUrl.searchParams.get('date') || undefined;
-  const [stats, budget] = await Promise.all([
+  const todayKST = new Date(Date.now() + 9 * 3600 * 1000).toISOString().split('T')[0];
+  const [stats, budget, cron] = await Promise.all([
     date ? getStats(date) : getStats(),
     getBudgetStatus(),
+    getCronStatus(todayKST),
   ]);
   const data = date
     ? stats
-    : { today: stats, history: await getAllStats(), budget };
+    : { today: stats, history: await getAllStats(), budget, cron };
 
   return NextResponse.json(
     { meta: { version: '1.0', status: 'success' }, data },

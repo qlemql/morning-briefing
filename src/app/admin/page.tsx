@@ -31,6 +31,16 @@ interface AnalyticsData {
     shares: number;
   }>;
   budget?: BudgetData;
+  cron?: CronStatusData | null;
+}
+
+interface CronStatusData {
+  date: string;
+  ok: boolean;
+  results: Record<string, string>;
+  source: string;
+  ranAt: string;
+  recovered?: boolean;
 }
 
 interface SubscriberData {
@@ -171,7 +181,7 @@ export default function AdminPage() {
     setCronRunning(true);
     setCronResult(null);
     try {
-      const res = await fetch('/api/cron', {
+      const res = await fetch('/api/cron?source=manual', {
         headers: { Authorization: `Bearer ${secret}` },
       });
       const data = await res.json();
@@ -260,6 +270,73 @@ export default function AdminPage() {
             </button>
           </div>
         </div>
+
+        {/* Cron 실행 상태 배너 — 실패/누락/복구 */}
+        {analytics && (() => {
+          const cron = analytics.cron;
+
+          // 실패: 오늘 실행됐지만 OK 아님
+          if (cron && !cron.ok) {
+            return (
+              <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-2xl p-5 mb-6 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🚨</span>
+                  <div>
+                    <p className="text-sm font-bold text-red-700 dark:text-red-300">오늘 브리핑 생성 실패</p>
+                    <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                      {cron.date} · {cron.results?.economy || '결과 없음'} · 트리거: {cron.source}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={triggerCron}
+                  disabled={cronRunning}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 active:scale-95 transition-all disabled:opacity-50 whitespace-nowrap"
+                >
+                  {cronRunning ? '재생성 중...' : '지금 재생성'}
+                </button>
+              </div>
+            );
+          }
+
+          // 기록 없음: 오늘 cron이 아직 안 돌았거나 상태 미기록
+          if (!cron) {
+            return (
+              <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-2xl p-5 mb-6 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">⏳</span>
+                  <div>
+                    <p className="text-sm font-bold text-amber-700 dark:text-amber-300">오늘 생성 기록 없음</p>
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                      아직 cron이 돌지 않았거나 상태가 기록되지 않았습니다.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={triggerCron}
+                  disabled={cronRunning}
+                  className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 active:scale-95 transition-all disabled:opacity-50 whitespace-nowrap"
+                >
+                  {cronRunning ? '생성 중...' : '지금 생성'}
+                </button>
+              </div>
+            );
+          }
+
+          // 워치독 복구: 1차 누락을 자동으로 메꿈
+          if (cron.recovered) {
+            return (
+              <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 rounded-2xl p-4 mb-6 flex items-center gap-3">
+                <span className="text-xl">✅</span>
+                <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                  오늘 1차 생성이 빠졌지만 워치독이 자동 복구했어요 ({cron.date}).
+                </p>
+              </div>
+            );
+          }
+
+          return null;
+        })()}
 
         {/* Manual Cron Trigger */}
         <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 mb-6">

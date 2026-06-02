@@ -1,0 +1,105 @@
+name: Daily Briefing (external trigger + monitor)
+
+# Vercel cron이 안 돌더라도(플랫폼 장애 등) 브리핑이 매일 생성되도록 하는
+# Vercel-독립 외부 안전망. 추가로 "오늘자 콘텐츠가 실제로 신선한지"를 검증하고
+# 폴백/실패면 Telegram으로 알린다 (= "cron이 아예 안 돌았다"까지 감지하는 dead-man's switch).
+#
+# 필요한 GitHub Secrets (Settings → Secrets and variables → Actions):
+#   SITE_URL            예: https://morning-briefing-mocha.vercel.app
+#   CRON_SECRET         Vercel의 CRON_SECRET와 동일
+#   TELEGRAM_BOT_TOKEN  (선택) 미설정 시 알림만 생략, 트리거/검증은 그대로 동작
+#   TELEGRAM_CHAT_ID    (선택)
+#
+# /api/cron 은 멱등(idempotent)이라 Vercel cron이 이미 생성했으면 재생성/중복비용 없음.
+
+on:
+  schedule:
+    - cron: '15 22 * * *'  # 07:15 KST — 1차 외부 트리거 (Vercel 07:00 이후, 자동게시 06:50 이후)
+    - cron: '0 1 * * *'    # 10:00 KST — 워치독 재검증
+  workflow_dispatch: {}     # 수동 실행 버튼
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-briefing
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      SITE_URL: ${{ secrets.SITE_URL }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    steps:
+      - name: Sanity check secrets
+        run: |
+          if [ -z "$SITE_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::error::SITE_URL / CRON_SECRET 시크릿이 비어 있습니다. repo Settings → Secrets 에 등록하세요."
+            exit 1
+          fi
+
+      - name: Trigger generation (idempotent)
+        run: |
+          # 워치독 스케줄(10:00 KST)이면 source=watchdog, 아니면 일반
+          src="manual"
+          if [ "${{ github.event.schedule }}" = "0 1 * * *" ]; then src="watchdog"; fi
+          echo "POST $SITE_URL/api/cron?source=$src"
+          code=$(curl -s -o /tmp/cron.json -w '%{http_code}' --max-time 290 \
+            "$SITE_URL/api/cron?source=$src" \
+            -H "Authorization: Bearer $CRON_SECRET" || echo 000)
+          echo "HTTP $code"
+          echo "----- response -----"; cat /tmp/cron.json || true; echo
+          # 트리거 단계에서 바로 실패시키지 않고, 아래 검증 단계가 최종 판정한다.
+
+      - name: Verify freshness & alert
+        run: |
+          set -euo pipefail
+          today_kst="$(TZ=Asia/Seoul date +%F)"
+          resp="$(curl -s -X POST "$SITE_URL/api/briefing" \
+            -H 'Content-Type: application/json' -d '{"category":"economy"}')"
+
+          verdict="$(printf '%s' "$resp" | python3 -c '
+          import sys, json
+          try:
+              d = json.load(sys.stdin)
+          except Exception as e:
+              print("PARSE_ERROR " + str(e)); raise SystemExit
+          data = d.get("data", d)
+          cards = data.get("cards") or (data.get("briefing", {}) or {}).get("cards") or []
+          if not cards:
+              print("NO_CARDS"); raise SystemExit
+          c = cards[0]
+          cid = c.get("id", "")
+          gen = str(data.get("generatedAt", ""))
+          title = c.get("title", "")
+          # 카드 id가 eg_ 로 시작하면 evergreen 폴백 = 오늘자 미생성
+          if cid.startswith("eg_"):
+              print("STALE\t%s\t%s" % (gen, title))
+          else:
+              print("FRESH\t%s\t%s" % (gen, title))
+          ')"
+
+          status="${verdict%%$'\t'*}"
+          echo "오늘(KST)=$today_kst | 판정=$verdict"
+
+          if [ "$status" = "FRESH" ]; then
+            echo "✅ 오늘자 브리핑 신선함."
+            exit 0
+          fi
+
+          # ---- 실패: Telegram 알림 + 워크플로 실패 처리 ----
+          msg="🚨 아침브리핑 신선도 경고 (${today_kst})%0A판정: ${verdict}%0A%0AGitHub Action이 /api/cron 을 호출했는데도 폴백이 서빙되고 있어요.%0A어드민: ${SITE_URL}/admin"
+          if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+              --data-urlencode "text=${msg}" \
+              -d "disable_web_page_preview=true" >/dev/null || echo "(텔레그램 전송 실패)"
+            echo "Telegram 알림 전송 시도함."
+          else
+            echo "::warning::TELEGRAM 시크릿 미설정 — 알림 생략 (검증 실패는 아래에서 표시)"
+          fi
+          echo "::error::오늘자 브리핑이 여전히 폴백 상태입니다 ($verdict)"
+          exit 1

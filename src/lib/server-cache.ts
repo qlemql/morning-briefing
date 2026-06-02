@@ -167,6 +167,21 @@ export const ServerCache = {
   },
 
   /**
+   * 오늘자 브리핑이 Redis에 이미 존재하는지만 확인 (생성/파싱 없음)
+   * cron이 "방금 새로 생성했는가 vs 이미 있던 것인가"를 구분하는 데 사용 —
+   * 워치독/수동 재실행 시 중복 push·SNS 방지.
+   */
+  async peekRedis(category: string, date: string): Promise<boolean> {
+    if (!isRedisConfigured()) return false;
+    try {
+      const raw = await kvGet(`mb:briefing:${category}:${date}`);
+      return !!raw;
+    } catch {
+      return false;
+    }
+  },
+
+  /**
    * Archive 조회 — SEO용 장기 보관 데이터 (365일)
    * 단기 캐시에 없으면 archive 키 fallback. 정적 페이지(/archive/[date])용.
    */
