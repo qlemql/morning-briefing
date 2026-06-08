@@ -64,6 +64,20 @@ async function fetchWithRetry(
   return fetch(url, options);
 }
 
+/** YYYY-MM-DD 날짜에 일수를 더해 새 YYYY-MM-DD 반환 (날짜 산술, TZ 무관) */
+function shiftDate(iso: string, deltaDays: number): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + deltaDays);
+  return d.toISOString().split('T')[0];
+}
+
+/** YYYY-MM-DD → "6월 8일 월요일" 라벨 */
+function koreanDateLabel(iso: string): string {
+  const [y, m, day] = iso.split('-').map(Number);
+  const dow = ['일', '월', '화', '수', '목', '금', '토'][new Date(Date.UTC(y, m - 1, day)).getUTCDay()];
+  return `${m}월 ${day}일 ${dow}요일`;
+}
+
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -74,7 +88,17 @@ export default function Home() {
     }
     return 'economy';
   });
+  // briefings: 날짜(YYYY-MM-DD)별 브리핑 캐시 (단일 카테고리 집중 — 날짜로 키잉)
   const [briefings, setBriefings] = useState<Record<string, BriefingCategory>>({});
+  // viewDate: 현재 보고 있는 날짜. ?date= 딥링크 지원, 기본은 오늘
+  const [viewDate, setViewDate] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const d = params.get('date');
+      if (d && /^\d{4}-\d{2}-\d{2}$/.test(d) && d <= CacheUtils.getTodayDate()) return d;
+    }
+    return CacheUtils.getTodayDate();
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<{ message: string; type: string } | null>(null);
   // 후원 모델: 모든 카드를 누구에게나 무료 공개
@@ -218,10 +242,39 @@ export default function Home() {
     }, 120);
   }, [activeCategory]);
 
-  // Keyboard navigation: arrow keys to switch categories
+  // 날짜 전환 (지난 브리핑 탐색)
+  const switchDate = useCallback((newDate: string) => {
+    if (newDate === viewDate) return;
+    setTransitioning(true);
+    setTimeout(() => {
+      setViewDate(newDate);
+      setTransitioning(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 120);
+  }, [viewDate]);
+
+  const goPrevDay = useCallback(() => {
+    hapticLight();
+    switchDate(shiftDate(viewDate, -1)); // 어제(더 과거)
+  }, [viewDate, switchDate]);
+
+  const goNextDay = useCallback(() => {
+    if (viewDate >= CacheUtils.getTodayDate()) return; // 오늘 이후로는 못 감
+    hapticLight();
+    switchDate(shiftDate(viewDate, 1));
+  }, [viewDate, switchDate]);
+
+  // Keyboard navigation: arrow keys
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      // 단일 카테고리: 화살표로 날짜 이동 (← 어제 / → 오늘 방향)
+      if (ACTIVE_CATEGORIES.length <= 1) {
+        if (e.key === 'ArrowLeft') goPrevDay();
+        else if (e.key === 'ArrowRight') goNextDay();
+        return;
+      }
+      // 다중 카테고리: 화살표로 카테고리 전환
       const categoryIds = ACTIVE_CATEGORIES.map((c) => c.id as string);
       const idx = categoryIds.indexOf(activeCategory);
       if (e.key === 'ArrowRight' && idx < categoryIds.length - 1) {
@@ -232,7 +285,7 @@ export default function Home() {
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [activeCategory, switchCategory]);
+  }, [activeCategory, switchCategory, goPrevDay, goNextDay]);
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     touchEndX.current = e.changedTouches[0].clientX;
@@ -242,23 +295,32 @@ export default function Home() {
     const absX = Math.abs(deltaX);
     const absY = Math.abs(deltaY);
 
-    // Horizontal-dominant gesture only — prevent vertical scroll from triggering tab switch
+    // Horizontal-dominant gesture only — prevent vertical scroll from triggering switch
     if (absX < SWIPE_THRESHOLD || absX < absY * 1.5) return;
 
-    const categoryIds = CATEGORIES.map((c) => c.id as string);
-    const currentIndex = categoryIds.indexOf(activeCategory);
+    // 단일 카테고리: 스와이프로 날짜 이동 (왼쪽=어제 / 오른쪽=오늘 방향)
+    if (ACTIVE_CATEGORIES.length <= 1) {
+      if (deltaX > 0) goPrevDay();
+      else goNextDay();
+      return;
+    }
 
+    // 다중 카테고리: 스와이프로 카테고리 전환
+    const categoryIds = ACTIVE_CATEGORIES.map((c) => c.id as string);
+    const currentIndex = categoryIds.indexOf(activeCategory);
     if (deltaX > 0 && currentIndex < categoryIds.length - 1) {
       switchCategory(categoryIds[currentIndex + 1]);
     } else if (deltaX < 0 && currentIndex > 0) {
       switchCategory(categoryIds[currentIndex - 1]);
     }
-  }, [activeCategory, switchCategory]);
+  }, [activeCategory, switchCategory, goPrevDay, goNextDay]);
 
-  const briefing = briefings[activeCategory] || null;
+  const todayStr = CacheUtils.getTodayDate();
+  const isToday = viewDate >= todayStr;
+  const briefing = briefings[viewDate] || null;
 
-  const loadBriefing = useCallback(async (category: string) => {
-    if (briefings[category]) return; // 이미 로드됨
+  const loadBriefing = useCallback(async (date: string) => {
+    if (briefings[date]) return; // 이미 로드됨
 
     setLoading(true);
     setError(null);
@@ -266,58 +328,66 @@ export default function Home() {
     // Show "still loading" indicator after 3 seconds
     slowTimerRef.current = setTimeout(() => setSlowLoading(true), 3000);
 
-    try {
-      const today = CacheUtils.getTodayDate();
+    const category = activeCategory;
+    const today = CacheUtils.getTodayDate();
 
-      // 캐시 확인
-      const cached = CacheUtils.getBriefing(category, today);
+    try {
+      // 클라이언트 캐시 확인 (날짜별)
+      const cached = CacheUtils.getBriefing(category, date);
       if (cached) {
-        setBriefings((prev) => ({ ...prev, [category]: cached }));
+        setBriefings((prev) => ({ ...prev, [date]: cached }));
         setLoading(false);
         return;
       }
 
-      // API 호출 (unlock 토큰 포함)
-      const unlockToken = CacheUtils.getUnlockToken(category);
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      if (unlockToken) {
-        headers['x-unlock-token'] = unlockToken;
-      }
-      const response = await fetchWithRetry('/api/briefing', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ category, date: today }),
-      });
+      if (date >= today) {
+        // 오늘: 생성/서빙 경로
+        const unlockToken = CacheUtils.getUnlockToken(category);
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (unlockToken) headers['x-unlock-token'] = unlockToken;
 
-      const data = await response.json();
+        const response = await fetchWithRetry('/api/briefing', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ category, date }),
+        });
+        const data = await response.json();
 
-      if (!response.ok || data.meta.status === 'error') {
-        const code = data.error?.code || 'UNKNOWN';
-        if (code === 'INVALID_API_KEY') {
-          setError({ message: '서비스에 일시적인 문제가 있어요. 잠시 후 다시 시도해주세요.', type: 'auth' });
-        } else if (code === 'RATE_LIMITED') {
-          setError({ message: '잠시 후 다시 시도해주세요.', type: 'rate' });
-        } else if (code === 'BUDGET_EXCEEDED' || data.error?.message?.includes('budget')) {
-          setError({ message: '오늘의 브리핑 생성 한도에 도달했어요. 내일 다시 확인해주세요!', type: 'budget' });
-        } else {
-          setError({ message: '브리핑을 불러올 수 없습니다.', type: 'general' });
+        if (!response.ok || data.meta.status === 'error') {
+          const code = data.error?.code || 'UNKNOWN';
+          if (code === 'INVALID_API_KEY') {
+            setError({ message: '서비스에 일시적인 문제가 있어요. 잠시 후 다시 시도해주세요.', type: 'auth' });
+          } else if (code === 'RATE_LIMITED') {
+            setError({ message: '잠시 후 다시 시도해주세요.', type: 'rate' });
+          } else if (code === 'BUDGET_EXCEEDED' || data.error?.message?.includes('budget')) {
+            setError({ message: '오늘의 브리핑 생성 한도에 도달했어요. 내일 다시 확인해주세요!', type: 'budget' });
+          } else {
+            setError({ message: '브리핑을 불러올 수 없습니다.', type: 'general' });
+          }
+          return;
         }
-        return;
-      }
 
-      if (data.data) {
-        setBriefings((prev) => ({ ...prev, [category]: data.data }));
-        CacheUtils.setBriefing(category, today, data.data);
+        if (data.data) {
+          setBriefings((prev) => ({ ...prev, [date]: data.data }));
+          CacheUtils.setBriefing(category, date, data.data);
+        }
+      } else {
+        // 과거: archive(365일 보관) 조회 — 생성 호출 없음
+        const response = await fetchWithRetry(`/api/archive?category=${category}&date=${date}`, { method: 'GET' });
+        const data = await response.json();
+        if (response.ok && data.data) {
+          setBriefings((prev) => ({ ...prev, [date]: data.data }));
+          CacheUtils.setBriefing(category, date, data.data);
+        } else {
+          setError({ message: '이 날짜에는 브리핑이 없어요.', type: 'general' });
+        }
       }
     } catch {
-      // 네트워크 에러 — 캐시 폴백
-      const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-      const fallback = CacheUtils.getBriefing(category, yesterday);
+      // 네트워크 에러 — 해당 날짜의 저장된 캐시로 폴백
+      const fallback = CacheUtils.getBriefing(category, date);
       if (fallback) {
-        setBriefings((prev) => ({ ...prev, [category]: fallback }));
-        setError({ message: '어제의 브리핑을 보여드립니다.', type: 'stale' });
+        setBriefings((prev) => ({ ...prev, [date]: fallback }));
+        setError({ message: '저장된 브리핑을 보여드립니다.', type: 'stale' });
       } else {
         setError({ message: '네트워크 연결을 확인해주세요.', type: 'offline' });
       }
@@ -326,35 +396,34 @@ export default function Home() {
       setSlowLoading(false);
       if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
     }
-  }, [briefings]);
+  }, [briefings, activeCategory]);
 
   const handleRefresh = useCallback(async () => {
     hapticMedium();
-    const today = CacheUtils.getTodayDate();
-    CacheUtils.clearBriefing(activeCategory, today);
+    CacheUtils.clearBriefing(activeCategory, viewDate);
     setBriefings((prev) => {
       const next = { ...prev };
-      delete next[activeCategory];
+      delete next[viewDate];
       return next;
     });
     // State reset triggers loadBriefing via useEffect (no manual call needed)
-  }, [activeCategory]);
+  }, [activeCategory, viewDate]);
 
-  // Dynamic page title + URL based on category
+  // Dynamic page title + URL based on viewDate
   useEffect(() => {
-    const catName = CATEGORIES.find(c => c.id === activeCategory)?.name || '';
-    document.title = `${catName} · 아침 브리핑`;
-    // Update URL for deep linking without reload
-    const url = activeCategory === 'economy'
+    const today = CacheUtils.getTodayDate();
+    document.title = viewDate >= today ? '아침 브리핑' : `${koreanDateLabel(viewDate)} · 아침 브리핑`;
+    // 과거 날짜는 ?date= 딥링크로 공유 가능
+    const url = viewDate >= today
       ? window.location.pathname
-      : `${window.location.pathname}?category=${activeCategory}`;
+      : `${window.location.pathname}?date=${viewDate}`;
     window.history.replaceState(null, '', url);
-  }, [activeCategory]);
+  }, [viewDate]);
 
   useEffect(() => {
-    loadBriefing(activeCategory);
+    loadBriefing(viewDate);
     track('page_view', { category: activeCategory });
-  }, [activeCategory, loadBriefing]);
+  }, [viewDate, loadBriefing, activeCategory]);
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
@@ -387,11 +456,53 @@ export default function Home() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">아침 브리핑</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-2">
-                <span>{getTodayLabel()} · {new Date().getHours() < 12 ? '3분 아침 브리핑' : new Date().getHours() < 18 ? '좋은 오후에요' : '좋은 저녁이에요'}</span>
-              </p>
+              <div className="mt-0.5 flex items-center gap-0.5 text-sm text-gray-500 dark:text-gray-400">
+                <button
+                  onClick={goPrevDay}
+                  aria-label="이전 날 브리핑"
+                  className="w-6 h-6 -ml-1 rounded flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-90 transition-colors shrink-0"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6" /></svg>
+                </button>
+                <span className="px-0.5 tabular-nums">
+                  {isToday
+                    ? `${getTodayLabel()} · ${new Date().getHours() < 12 ? '3분 아침 브리핑' : new Date().getHours() < 18 ? '좋은 오후에요' : '좋은 저녁이에요'}`
+                    : koreanDateLabel(viewDate)}
+                </span>
+                <button
+                  onClick={goNextDay}
+                  disabled={isToday}
+                  aria-label="다음 날 브리핑"
+                  className="w-6 h-6 rounded flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-90 transition-colors shrink-0 disabled:opacity-30 disabled:pointer-events-none"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6" /></svg>
+                </button>
+                {!isToday && (
+                  <button
+                    onClick={() => { hapticLight(); switchDate(CacheUtils.getTodayDate()); }}
+                    className="ml-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 active:scale-95 transition-transform shrink-0"
+                  >
+                    오늘
+                  </button>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2">
+              {/* 지난 브리핑(아카이브) 바로가기 */}
+              <Link
+                href="/archive"
+                onClick={() => hapticLight()}
+                aria-label="지난 브리핑"
+                title="지난 브리핑"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors active:scale-90"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+              </Link>
               <ThemeToggle />
               {/* [REMOVED] PRO/체험 D-X 배지 — 후원 모델 전환으로 제거 */}
             </div>
@@ -435,10 +546,10 @@ export default function Home() {
                   setError(null);
                   setBriefings((prev) => {
                     const next = { ...prev };
-                    delete next[activeCategory];
+                    delete next[viewDate];
                     return next;
                   });
-                  loadBriefing(activeCategory);
+                  loadBriefing(viewDate);
                 }}
                 className="ml-auto text-xs font-medium underline active:scale-95 transition-transform"
               >
@@ -524,7 +635,7 @@ export default function Home() {
               const lines = briefing.cards
                 .filter((c) => c.number === 1 || isPremiumUnlocked)
                 .map((c) => `${c.number}. ${c.title}\n   ${c.summary}`);
-              const text = `[아침 브리핑 · ${catName}] ${getTodayLabel()}\n\n${lines.join('\n\n')}\n\n👉 https://morning-briefing-mocha.vercel.app`;
+              const text = `[아침 브리핑 · ${catName}] ${koreanDateLabel(viewDate)}\n\n${lines.join('\n\n')}\n\n👉 https://morning-briefing-mocha.vercel.app`;
               if (navigator.clipboard) {
                 await navigator.clipboard.writeText(text);
                 hapticLight();
