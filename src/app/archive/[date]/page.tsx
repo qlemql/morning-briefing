@@ -2,10 +2,10 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ServerCache } from '@/lib/server-cache';
-import { CATEGORIES } from '@/constants';
+import { CATEGORIES, ACTIVE_CATEGORIES } from '@/constants';
 import type { BriefingCategory, BriefingCard } from '@/lib/types';
 
-const CATEGORY_IDS = ['economy', 'investment', 'lifestyle'] as const;
+const CATEGORY_IDS = ACTIVE_CATEGORIES.map((c) => c.id);
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const SITE_URL = 'https://morning-briefing-mocha.vercel.app';
 
@@ -45,9 +45,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const koreanDate = formatKoreanDate(date);
   const title = heroCard
     ? `${koreanDate} ${heroCard.title} — 아침 브리핑`
-    : `${koreanDate} 경제·투자·생활 뉴스 요약 — 아침 브리핑`;
+    : `${koreanDate} 경제/시사 뉴스 요약 — 아침 브리핑`;
   const description = heroCard?.summary
-    || `${koreanDate} AI가 정리한 한국 경제·투자·생활/테크 핵심 뉴스. 출근길 3분 안에 오늘 꼭 알아야 할 정보.`;
+    || `${koreanDate} AI가 정리한 한국 경제/시사 핵심 뉴스. 출근길 3분 안에 오늘 꼭 알아야 할 정보.`;
   const canonical = `${SITE_URL}/archive/${date}`;
 
   return {

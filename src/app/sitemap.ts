@@ -21,18 +21,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/?category=investment`,
-      lastModified: now,
-      changeFrequency: 'daily',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/?category=lifestyle`,
-      lastModified: now,
-      changeFrequency: 'daily',
-      priority: 0.9,
-    },
-    {
       url: `${baseUrl}/archive`,
       lastModified: now,
       changeFrequency: 'daily',
@@ -49,12 +37,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // 동적 archive 날짜 페이지들 — SEO 자동 인덱싱용
   let archiveEntries: MetadataRoute.Sitemap = [];
   try {
-    const [econ, inv, life] = await Promise.all([
-      ServerCache.listArchiveDates('economy', 365),
-      ServerCache.listArchiveDates('investment', 365),
-      ServerCache.listArchiveDates('lifestyle', 365),
-    ]);
-    const allDates = Array.from(new Set([...econ, ...inv, ...life]))
+    const econ = await ServerCache.listArchiveDates('economy', 365);
+    const allDates = Array.from(new Set(econ))
       .sort((a, b) => b.localeCompare(a));
 
     archiveEntries = allDates.map((date) => ({

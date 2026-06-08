@@ -33,13 +33,9 @@ function dayOfWeek(iso: string): string {
 }
 
 export default async function ArchiveIndexPage() {
-  // 카테고리별로 모든 archive 날짜를 모아 합집합
-  const [econDates, invDates, lifeDates] = await Promise.all([
-    ServerCache.listArchiveDates('economy', 365),
-    ServerCache.listArchiveDates('investment', 365),
-    ServerCache.listArchiveDates('lifestyle', 365),
-  ]);
-  const allDates = Array.from(new Set([...econDates, ...invDates, ...lifeDates]))
+  // economy 카테고리만 활성 — 해당 archive 날짜 집계
+  const econDates = await ServerCache.listArchiveDates('economy', 365);
+  const allDates = Array.from(new Set(econDates))
     .sort((a, b) => b.localeCompare(a))
     .slice(0, 90);
 
@@ -61,7 +57,7 @@ export default async function ArchiveIndexPage() {
           아침 브리핑 아카이브
         </h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          날짜별로 그날의 경제·투자·생활/테크 뉴스 요약을 다시 볼 수 있어요
+          날짜별로 그날의 경제/시사 뉴스 요약을 다시 볼 수 있어요
         </p>
       </header>
 

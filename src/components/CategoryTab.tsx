@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
-import { CATEGORIES } from '@/constants';
+import { ACTIVE_CATEGORIES } from '@/constants';
 import { hapticLight } from '@/lib/haptic';
 
 interface CategoryTabProps {
@@ -37,7 +37,7 @@ export default function CategoryTab({
           aria-hidden="true"
         />
 
-        {CATEGORIES.map((cat) => {
+        {ACTIVE_CATEGORIES.map((cat) => {
           const isActive = activeCategory === cat.id;
           return (
             <button

@@ -139,13 +139,12 @@ export default function RootLayout({
         <noscript>
           <div style={{ textAlign: 'center', padding: '40px 20px', maxWidth: '600px', margin: '0 auto' }}>
             <h1>아침 브리핑 - AI가 매일 아침 정리하는 뉴스</h1>
-            <p>AI가 매일 아침 경제, 투자, 생활/테크 뉴스를 3장의 카드로 정리해드립니다.</p>
+            <p>AI가 매일 아침 경제/시사 뉴스를 3장의 카드로 정리해드립니다.</p>
             <p style={{ marginTop: '16px' }}>이 서비스는 JavaScript가 필요합니다. 브라우저 설정에서 JavaScript를 활성화해주세요.</p>
             <nav style={{ marginTop: '24px' }}>
               <ul style={{ listStyle: 'none', padding: 0 }}>
+                {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- noscript fallback: Link는 JS 없이는 동작 안 함 */}
                 <li><a href="/?category=economy">경제/시사 브리핑</a></li>
-                <li><a href="/?category=investment">투자 브리핑</a></li>
-                <li><a href="/?category=lifestyle">생활/테크 브리핑</a></li>
               </ul>
             </nav>
           </div>

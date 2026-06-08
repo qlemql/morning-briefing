@@ -1,6 +1,7 @@
 export const CATEGORIES = [
   {
     id: 'economy',
+    enabled: true,
     name: '경제/시사',
     color: 'sky',
     bgClass: 'bg-sky-50',
@@ -12,6 +13,7 @@ export const CATEGORIES = [
   },
   {
     id: 'investment',
+    enabled: false,
     name: '투자',
     color: 'amber',
     bgClass: 'bg-amber-50',
@@ -23,6 +25,7 @@ export const CATEGORIES = [
   },
   {
     id: 'lifestyle',
+    enabled: false,
     name: '생활/테크',
     color: 'violet',
     bgClass: 'bg-violet-50',
@@ -33,6 +36,13 @@ export const CATEGORIES = [
     lightBg: 'bg-violet-500/10',
   },
 ] as const;
+
+/**
+ * 현재 노출 중인(활성) 카테고리만 필터링.
+ * 탭 UI·스와이프·딥링크는 이 목록을 기준으로 동작한다.
+ * 다른 카테고리를 다시 켜려면 CATEGORIES의 해당 항목 enabled를 true로.
+ */
+export const ACTIVE_CATEGORIES = CATEGORIES.filter((c) => c.enabled);
 
 export const CARD_TYPE_LABELS: Record<string, { label: string; icon: string }> = {
   '오늘의핵심': { label: '오늘의 핵심', icon: '🔥' },

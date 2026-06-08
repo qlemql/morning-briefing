@@ -25,7 +25,7 @@ const NotificationSettings = lazy(() => import('@/components/NotificationSetting
 
 import { BriefingCategory } from '@/lib/types';
 import { CacheUtils } from '@/lib/cache';
-import { getTodayLabel, CATEGORIES } from '@/constants';
+import { getTodayLabel, CATEGORIES, ACTIVE_CATEGORIES } from '@/constants';
 import { track } from '@/lib/track';
 import { hapticLight, hapticMedium } from '@/lib/haptic';
 import { reportWebVitals } from '@/lib/vitals';
@@ -69,7 +69,8 @@ export default function Home() {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const cat = params.get('category');
-      if (cat && ['economy', 'investment', 'lifestyle'].includes(cat)) return cat;
+      // 비활성 카테고리로 딥링크되면 economy로 폴백
+      if (cat && ACTIVE_CATEGORIES.some((c) => c.id === cat)) return cat;
     }
     return 'economy';
   });
@@ -221,7 +222,7 @@ export default function Home() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      const categoryIds = CATEGORIES.map((c) => c.id as string);
+      const categoryIds = ACTIVE_CATEGORIES.map((c) => c.id as string);
       const idx = categoryIds.indexOf(activeCategory);
       if (e.key === 'ArrowRight' && idx < categoryIds.length - 1) {
         switchCategory(categoryIds[idx + 1]);
@@ -395,10 +396,13 @@ export default function Home() {
               {/* [REMOVED] PRO/체험 D-X 배지 — 후원 모델 전환으로 제거 */}
             </div>
           </div>
-          <CategoryTab
-            activeCategory={activeCategory}
-            onCategoryChange={switchCategory}
-          />
+          {/* 단일 카테고리만 활성화된 경우 탭바 숨김 (경제/시사 집중 모드) */}
+          {ACTIVE_CATEGORIES.length > 1 && (
+            <CategoryTab
+              activeCategory={activeCategory}
+              onCategoryChange={switchCategory}
+            />
+          )}
         </div>
       </header>
 
