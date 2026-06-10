@@ -2,7 +2,7 @@
 
 **English** · [한국어](README.ko.md)
 
-> A daily AI-generated Korean briefing app for executives, built on a shared-cache architecture that keeps API cost flat as the user base grows.
+> A daily AI-generated Korean briefing app for executives, built on a shared-cache architecture that keeps API cost flat as the user base grows — with a layered reliability setup so a solo maintainer isn't the single point of failure.
 
 📱 Available on the App Store
 
@@ -16,66 +16,75 @@ The hard part wasn't the UI. It was the cost model. Most LLM-powered consumer ap
 
 ## How it works
 
-**Shared daily cache.** All users see the same briefing for a given day. Content is generated once per day per category (Economy, Investment), cached server-side, and read from `localStorage` on the client.
+**Shared daily cache.** All users see the same briefing for a given day. Content is generated once per day per category, cached in Upstash Redis server-side, and read from `localStorage` on the client.
 
 ```
-Client  → check localStorage("briefing_economy_2026-05-02")
+Client  → check localStorage("briefing_economy_2026-06-10")
         → cache miss → POST /api/briefing
         → cache hit  → render
 
-Server  → already generated today?
+Server  → already generated today? (Redis)
         → yes → serve cached
         → no  → call Claude → store → serve
 ```
 
-Result: **API cost is roughly fixed per day regardless of user count**. The 1,000th user costs the same as the first.
+Result: **API cost is roughly fixed per day regardless of user count.** The 1,000th user costs the same as the first — and a per-day/per-month budget guard hard-caps spend so a runaway loop can't surprise me.
 
-**Three-tier card system.** Card 1 is free, cards 2–3 sit behind a blurred paywall — enough free value to bring users back, with a clear upgrade path.
+**Focused on one category, built for many.** The app currently ships a single daily category — Economy / Current Affairs — because that's where daily freshness earns its cost. The category system is config-driven (an `enabled` flag), so Investment and Lifestyle/Tech are one line away from coming back.
 
-**Browse past briefings.** Every generated day is archived for 365 days. A date stepper, left/right swipe, and `?date=` deep links let you walk back through previous mornings — past days load straight from the archive and never re-generate.
+**Free, donation-supported.** Every card is free. It started as a card-2/3 paywall; I pivoted to a donation model — one genuinely useful read per day, with an optional "buy me a coffee" tip.
 
-**Capacitor for iOS.** The same Next.js codebase ships as a native iOS app on the App Store via Capacitor 8, with offline support, push notifications, local notifications, and badge counts through Capacitor plugins.
+**Browse past briefings.** Every generated day is archived for 365 days. A date stepper, left/right swipe, and `?date=` deep links let you walk back through previous mornings — past days load straight from the archive and never re-generate, so browsing history costs nothing.
+
+**Reliability without a babysitter.** Daily generation runs on a Vercel cron, backed by a second "watchdog" cron and an external GitHub Action that triggers and verifies freshness independently of the hosting platform — a dead-man's switch that pings me on Telegram if a morning ever goes stale. An evergreen fallback keeps the app serving even when generation fails.
+
+**Capacitor for iOS.** The same Next.js codebase ships as a native iOS app via Capacitor 8 — offline support, push notifications, local notifications, and badge counts through Capacitor plugins.
 
 ## Key features
 
-- Daily refresh per category with automatic cache invalidation by date key
+- Shared daily cache (Upstash Redis) with date-keyed invalidation — flat API cost
+- Per-day / per-month budget guard with a graceful evergreen fallback
 - Past-briefing archive (365 days) with date stepper, swipe, and shareable `?date=` links
+- Layered reliability: Vercel cron + watchdog cron + external GitHub Action heartbeat + Telegram alerts
 - Server-side API key handling — never exposed to the client
-- Skeleton loading states + paywall blur for smooth perceived performance
 - iOS native delivery via Capacitor with offline mode and push notifications
-- Five distinct error states handled explicitly (rate limit, auth, network, server, generation)
+- Admin dashboard: budget, analytics, system health, manual re-generation
 
 ## What I learned
 
 Designing the cache layer **before writing any UI** was the single most important decision in this project. I had a working interface in a few hours and a sustainable cost structure on day one. If I'd shipped per-user generation first and tried to retrofit caching later, the data model would have fought me at every step.
 
-Second lesson: a tiny paywall with one genuinely useful free card converts better than I expected. People want to see something working before they decide whether to pay — a fully blurred experience just makes them close the app.
+The second lesson came the hard way: **a scheduled job that fails silently is worse than no job.** My daily generation quietly missed a few mornings — users saw stale fallback content and I had no idea until I happened to look. The fix wasn't a bigger retry; it was designing for "how will I know when this breaks?" — an in-app watchdog, an external heartbeat that doesn't depend on the same platform that just failed, and alerts that reach my phone. The happy path was the easy 80%.
 
 ## Stack
 
-`Next.js 16 (App Router)` · `React 19` · `TypeScript 5` · `Tailwind CSS 4` · `Anthropic Claude API` · `Capacitor 8 (iOS)` · `Vercel`
+`Next.js 16 (App Router)` · `React 19` · `TypeScript 5` · `Tailwind CSS 4` · `Anthropic Claude API` · `Upstash Redis` · `Capacitor 8 (iOS)` · `Vercel` · `GitHub Actions`
 
 ## Project structure
 
 ```
 src/
 ├── app/
-│   ├── layout.tsx              Root layout with Korean metadata
-│   ├── page.tsx                Home page (client component)
-│   └── api/briefing/route.ts   Server-side Claude endpoint
-├── components/
-│   ├── BriefingCard.tsx        Card display with paywall support
-│   ├── CategoryTab.tsx         Category switcher
-│   ├── CardSkeleton.tsx        Loading skeleton
-│   └── PaywallOverlay.tsx      Premium unlock modal
+│   ├── page.tsx                 Home — single-category feed + date navigation
+│   ├── admin/page.tsx           Ops dashboard (budget, health, re-generate)
+│   ├── archive/                 Past briefings (index + /archive/[date])
+│   └── api/
+│       ├── briefing/route.ts    Today's briefing (generate or serve cached)
+│       ├── archive/route.ts     Past briefing by date (365-day store)
+│       └── cron/route.ts        Daily generation (idempotent, watchdog-safe)
+├── components/                  BriefingCard, CategoryTab, CardSkeleton, …
 ├── lib/
-│   ├── claude.ts               Claude API client
-│   ├── cache.ts                localStorage utilities
-│   └── types.ts                Shared TypeScript types
-└── constants/index.ts          Categories and config
+│   ├── claude.ts                Claude API client (web search + retries)
+│   ├── server-cache.ts          Redis-backed daily cache + 365-day archive
+│   ├── budget.ts                Per-day / per-month spend guard
+│   ├── alert.ts                 Owner alerts (Telegram)
+│   ├── kv.ts                    Upstash Redis wrapper
+│   └── cache.ts / types.ts      Client cache utils + shared types
+└── constants/index.ts           Categories (enabled flag) + config
 
-ios/                            Capacitor iOS project
-public/sw.js                    Service worker for offline mode
+.github/workflows/daily-briefing.yml   External trigger + freshness heartbeat
+vercel.json                            Cron schedules (daily + watchdog)
+ios/                                   Capacitor iOS project
 ```
 
 ---
