@@ -17,6 +17,11 @@ const config: CapacitorConfig = {
     backgroundColor: '#f5f5f7',
     preferredContentMode: 'mobile',
   },
+  android: {
+    backgroundColor: '#f5f5f7',
+    // 원격 URL(server.url)을 https로 로드 — 평문 트래픽 차단 유지
+    allowMixedContent: false,
+  },
   plugins: {
     SplashScreen: {
       launchAutoHide: true,
