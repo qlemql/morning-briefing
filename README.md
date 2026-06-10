@@ -32,11 +32,14 @@ Result: **API cost is roughly fixed per day regardless of user count**. The 1,00
 
 **Three-tier card system.** Card 1 is free, cards 2–3 sit behind a blurred paywall — enough free value to bring users back, with a clear upgrade path.
 
+**Browse past briefings.** Every generated day is archived for 365 days. A date stepper, left/right swipe, and `?date=` deep links let you walk back through previous mornings — past days load straight from the archive and never re-generate.
+
 **Capacitor for iOS.** The same Next.js codebase ships as a native iOS app on the App Store via Capacitor 8, with offline support, push notifications, local notifications, and badge counts through Capacitor plugins.
 
 ## Key features
 
 - Daily refresh per category with automatic cache invalidation by date key
+- Past-briefing archive (365 days) with date stepper, swipe, and shareable `?date=` links
 - Server-side API key handling — never exposed to the client
 - Skeleton loading states + paywall blur for smooth perceived performance
 - iOS native delivery via Capacitor with offline mode and push notifications
