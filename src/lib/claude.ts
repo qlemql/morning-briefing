@@ -404,6 +404,22 @@ export async function generateBriefing(
       console.warn(`[Claude] Card ${index + 1} has insufficient content (${content.length} chars)`);
     }
 
+    // 초심자 해설(카드 뒤집기) — Claude가 생성한 beginnerExplanation을 정리해 carry-through.
+    // (이전엔 이 필드를 누락시켜 실시간 생성 카드에서 '쉬운 풀이 보기'가 안 떴음)
+    const be = card.beginnerExplanation;
+    const beginnerExplanation = be
+      ? {
+          tldr: stripCiteTags(be.tldr || ''),
+          glossary: Array.isArray(be.glossary)
+            ? be.glossary
+                .filter((g) => g && g.term && g.explain)
+                .slice(0, 5)
+                .map((g) => ({ term: stripCiteTags(g.term), explain: stripCiteTags(g.explain) }))
+            : [],
+          whyItMatters: stripCiteTags(be.whyItMatters || ''),
+        }
+      : undefined;
+
     return {
       id: card.id || `card_${index + 1}`,
       number: (index + 1) as 1 | 2 | 3,
@@ -413,6 +429,8 @@ export async function generateBriefing(
       type: card.type || (types[index] as BriefingCard['type']),
       source: card.source,
       sourceUrl: card.sourceUrl && card.sourceUrl.startsWith('http') ? card.sourceUrl : undefined,
+      // tldr가 비면 해설 표시 안 함(빈 카드 방지)
+      beginnerExplanation: beginnerExplanation && beginnerExplanation.tldr ? beginnerExplanation : undefined,
     };
   });
 
