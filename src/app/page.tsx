@@ -627,6 +627,24 @@ export default function Home() {
           </Suspense>
         )}
 
+        {/* 읽었으면 → 오늘 브리핑 속 경제 개념을 직접 만져보며 학습 */}
+        {briefing && !loading && (
+          <Link
+            href="/learn"
+            onClick={() => hapticLight()}
+            className="block rounded-2xl border border-teal-200 dark:border-teal-900/50 bg-teal-50/70 dark:bg-teal-950/20 p-4 active:scale-[0.99] transition-transform"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-2xl" aria-hidden="true">🧮</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-teal-900 dark:text-teal-200">오늘 브리핑 속 경제, 직접 만져보기</p>
+                <p className="text-xs text-teal-700/80 dark:text-teal-300/70 mt-0.5">금리·복리·물가… 슬라이더로 30초 체감 학습</p>
+              </div>
+              <span className="text-teal-500 dark:text-teal-400" aria-hidden="true">→</span>
+            </div>
+          </Link>
+        )}
+
         {/* Copy entire briefing summary */}
         {briefing && !loading && (
           <button
