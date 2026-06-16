@@ -104,8 +104,14 @@ export const ServerCache = {
 
             // 카테고리별 archive 날짜 인덱스 (목록 페이지용)
             await kvSadd(`mb:archive_dates:${category}`, date);
-          } catch {
-            // Redis 저장 실패해도 in-memory 캐시는 유지
+          } catch (writeErr) {
+            // in-memory 캐시는 유지하되, 무증상 장애를 막기 위해 반드시 로깅한다.
+            // 이 쓰기가 실패하면 데이터가 현재 람다 메모리에만 남아, 다른 인스턴스
+            // (읽기 엔드포인트)는 evergreen 폴백만 서빙하게 된다.
+            console.error(
+              `[Cache] Redis write FAILED for ${category} ${date} — data only in-memory:`,
+              writeErr,
+            );
           }
         }
 
@@ -114,13 +120,12 @@ export const ServerCache = {
       .catch((error) => {
         pendingRequests.delete(key);
 
-        // Evergreen fallback: API 장애 시 상시 콘텐츠 반환
-        const fallback = getEvergreenBriefing(category, date);
-        if (fallback) {
-          console.warn(`[Cache] ${category} ${date} — generator failed, using evergreen fallback`);
-          return fallback;
-        }
-
+        // 생성 실패를 호출자(cron)에게 그대로 전파한다.
+        // 과거에는 여기서 evergreen 폴백을 반환했지만, 그러면 cron이
+        // "생성 실패 → 폴백(3장)"을 "OK (3 cards)"로 오판하고 아무것도 저장하지 않아
+        // 읽기 엔드포인트가 영구히 폴백만 서빙하는 무증상 장애가 발생했다.
+        // 폴백 서빙은 읽기 경로(getOnly)가 책임진다.
+        console.error(`[Cache] ${category} ${date} — generation failed, propagating to caller:`, error);
         throw error;
       });
 

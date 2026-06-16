@@ -266,7 +266,9 @@ export async function generateBriefing(
 
   const message = await withRetry(() =>
     client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      // claude-sonnet-4-20250514는 2026-06-15 API에서 은퇴됨(유예 없음) → 호출 즉시 실패.
+      // 동일 티어 후속 모델로 교체. 모델 스냅샷 은퇴 시 여기를 갱신할 것.
+      model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       system: [
         {

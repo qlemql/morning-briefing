@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateBriefing } from '@/lib/claude';
 import { ServerCache } from '@/lib/server-cache';
+import { isRedisConfigured } from '@/lib/kv';
 import { canAffordCall } from '@/lib/budget';
 import { formatForAllPlatforms } from '@/lib/sns-formatter';
 import { enqueueSNSPost, isQueueAvailable } from '@/lib/sns-queue';
@@ -64,6 +65,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         today,
         () => generateBriefing(category, today),
       );
+      // 생성됐어도 Redis 저장이 실패하면 다른 인스턴스(읽기 엔드포인트)는 폴백만
+      // 서빙한다. 따라서 영구 저장 여부를 직접 확인하고, 안 됐으면 실패로 처리한다.
+      if (isRedisConfigured() && !(await ServerCache.peekRedis(category, today))) {
+        throw new Error('generated but not persisted to Redis');
+      }
       results[category] = `OK (${briefing.cards.length} cards)`;
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -84,8 +90,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         }
         try {
           console.log(`[Cron] Retrying ${category}...`);
-          const briefing = await generateBriefing(category, today);
-          ServerCache.set(category, today, briefing);
+          // getOrGenerate로 재시도 — Redis 저장까지 보장한다.
+          // (과거에는 generateBriefing + ServerCache.set으로 in-memory에만 저장돼
+          //  재시도가 성공해도 읽기 엔드포인트는 폴백을 서빙하는 버그가 있었다.)
+          const briefing = await ServerCache.getOrGenerate(
+            category,
+            today,
+            () => generateBriefing(category, today),
+          );
+          if (isRedisConfigured() && !(await ServerCache.peekRedis(category, today))) {
+            throw new Error('retry generated but not persisted to Redis');
+          }
           results[category] = `OK (retry, ${briefing.cards.length} cards)`;
         } catch (retryError: unknown) {
           const retryMsg = retryError instanceof Error ? retryError.message : 'Unknown error';
