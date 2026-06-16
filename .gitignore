@@ -52,3 +52,7 @@ ios/App/Pods/
 
 # iOS build artifacts
 ios/App/build/
+
+# Claude Code transient state (harness-managed, machine-local)
+.claude/scheduled_tasks.lock
+.claude/worktrees/
