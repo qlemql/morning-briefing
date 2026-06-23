@@ -269,7 +269,11 @@ export async function generateBriefing(
       // claude-sonnet-4-20250514는 2026-06-15 API에서 은퇴됨(유예 없음) → 호출 즉시 실패.
       // 동일 티어 후속 모델로 교체. 모델 스냅샷 은퇴 시 여기를 갱신할 것.
       model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
+      // 8192: 카드3장 + beginnerExplanation(glossary 포함) 한국어 JSON은 web_search
+      // 텍스트까지 섞이면 4096을 자주 넘겨 잘림 → "No JSON found"로 생성 실패했음.
+      // 실제-토큰 과금(budget.ts)이라 상한↑은 비용에 영향 없음(실제 생성분만 청구).
+      // 상한은 가드레일일 뿐, 잘림 실패 시 재시도까지 2배 낭비되던 걸 없애 오히려 절감.
+      max_tokens: 8192,
       system: [
         {
           type: 'text' as const,
