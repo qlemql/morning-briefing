@@ -93,10 +93,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           // getOrGenerate로 재시도 — Redis 저장까지 보장한다.
           // (과거에는 generateBriefing + ServerCache.set으로 in-memory에만 저장돼
           //  재시도가 성공해도 읽기 엔드포인트는 폴백을 서빙하는 버그가 있었다.)
+          // 첫 시도와 "의미 있게 다르게" 호출 — 동일 파라미터면 같은 실패를 결정론적으로 반복한다.
+          // maxTokens↑(잘림 대응) + temperature 변경(형식이탈 패턴 깸) + 완결-JSON 보강 지시(opts.retry).
+          // web_search는 유지(끄면 오늘자 뉴스/sourceUrl 날조).
           const briefing = await ServerCache.getOrGenerate(
             category,
             today,
-            () => generateBriefing(category, today),
+            () => generateBriefing(category, today, { retry: true, maxTokens: 12000, temperature: 0.3 }),
           );
           if (isRedisConfigured() && !(await ServerCache.peekRedis(category, today))) {
             throw new Error('retry generated but not persisted to Redis');

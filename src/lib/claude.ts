@@ -200,9 +200,16 @@ function extractTextFromResponse(content: Anthropic.Messages.ContentBlock[]): st
     .join('');
 }
 
+/**
+ * @param opts cron 재시도를 첫 시도와 "의미 있게 다르게" 만들기 위한 옵션.
+ *   재시도가 첫 시도와 동일 파라미터면 같은 실패(잘림/형식이탈)를 결정론적으로 반복하므로,
+ *   재시도에서만 maxTokens↑(잘림 대응) + temperature 변경(형식이탈 패턴 깸)을 준다.
+ *   web_search는 항상 유지 — 끄면 모델이 "오늘자 뉴스"와 sourceUrl을 날조하기 때문(신선도/신뢰성 훼손).
+ */
 export async function generateBriefing(
   category: string,
   date: string,
+  opts: { maxTokens?: number; temperature?: number; retry?: boolean } = {},
 ): Promise<BriefingCategory> {
   const categoryMap: Record<string, string> = {
     economy: '경제/시사',
@@ -253,6 +260,14 @@ export async function generateBriefing(
 - 절대로 특정 종목/자산의 매수나 매도를 권유하지 마세요. "주목할 만하다", "모니터링이 필요하다" 수준의 표현만 가능
 - JSON만 출력하세요`;
 
+  // 재시도 전용 보강 지시 — 형식 이탈(산문/마크다운/불완전 JSON)로 인한 첫 실패를 정조준.
+  const finalUserPrompt = opts.retry
+    ? userPrompt +
+      `\n\n[재시도] 직전 응답이 파싱 불가였습니다. 설명·머리말·마크다운 코드펜스 없이 ` +
+      `'{'로 시작해 '}'로 끝나는 완결된 JSON 객체 하나만 출력하세요. 길이가 부담되면 ` +
+      `각 카드의 glossary를 최대 2개로 줄여서라도 반드시 JSON을 끝까지 닫으세요.`
+    : userPrompt;
+
   // Budget guard — prevent overspending
   const budget = await canAffordCall();
   if (!budget.allowed) {
@@ -273,7 +288,10 @@ export async function generateBriefing(
       // 텍스트까지 섞이면 4096을 자주 넘겨 잘림 → "No JSON found"로 생성 실패했음.
       // 실제-토큰 과금(budget.ts)이라 상한↑은 비용에 영향 없음(실제 생성분만 청구).
       // 상한은 가드레일일 뿐, 잘림 실패 시 재시도까지 2배 낭비되던 걸 없애 오히려 절감.
-      max_tokens: 8192,
+      max_tokens: opts.maxTokens ?? 8192,
+      // temperature는 첫 시도에선 미지정(API 기본값) — 기존 동작 보존.
+      // 재시도에서만 cron이 값을 넘겨 기본과 다른 샘플링 경로로 형식이탈 반복을 깬다.
+      ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
       system: [
         {
           type: 'text' as const,
@@ -290,7 +308,7 @@ export async function generateBriefing(
         },
       ],
       messages: [
-        { role: 'user', content: userPrompt },
+        { role: 'user', content: finalUserPrompt },
       ],
     }),
   );
