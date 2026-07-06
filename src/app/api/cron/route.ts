@@ -6,14 +6,14 @@ import { canAffordCall } from '@/lib/budget';
 import { formatForAllPlatforms } from '@/lib/sns-formatter';
 import { enqueueSNSPost, isQueueAvailable } from '@/lib/sns-queue';
 import { sendOwnerAlert } from '@/lib/alert';
+import {
+  creditExhaustedAlert,
+  generationFailedAlert,
+  watchdogRecoveredAlert,
+} from '@/lib/alert-messages';
 import { setCronStatus, type CronSource } from '@/lib/cron-status';
 
 export const maxDuration = 300;
-
-function adminUrl(): string {
-  const base = process.env.NEXT_PUBLIC_SITE_URL || 'https://morning-briefing-mocha.vercel.app';
-  return `${base}/admin`;
-}
 
 /**
  * GET /api/cron
@@ -195,24 +195,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       const failMsgs = categories.map((c) => results[c] ?? '');
       const creditExhausted = failMsgs.some((m) => /credit balance is too low/i.test(m));
 
-      if (creditExhausted) {
-        await sendOwnerAlert(
-          `🔴 <b>Anthropic 크레딧 소진 — 결제 필요</b>\n` +
-          `날짜: ${today} · 트리거: ${source}\n\n` +
-          `API가 "credit balance too low"를 반환해 브리핑 생성이 <b>전면 중단</b>됐습니다. ` +
-          `지금 사이트는 evergreen 폴백을 서빙 중이며, 충전 전까지 매 실행 실패합니다.\n\n` +
-          `▶ 충전(auto-reload 권장):\nhttps://console.anthropic.com/settings/billing\n\n` +
-          `▶ 충전 후 재생성:\n${adminUrl()}`,
-        );
-      } else {
-        await sendOwnerAlert(
-          `🚨 <b>아침브리핑 생성 실패</b>\n날짜: ${today}\n트리거: ${source}\n결과: ${results.economy ?? 'N/A'}\n\n어드민에서 재생성하세요:\n${adminUrl()}`,
-        );
-      }
-    } else if (recovered) {
       await sendOwnerAlert(
-        `✅ <b>아침브리핑 자동 복구</b>\n날짜: ${today}\n1차 생성이 빠졌지만 워치독이 재생성했어요.`,
+        creditExhausted
+          ? creditExhaustedAlert({ date: today, source })
+          : generationFailedAlert({ date: today, source, result: results.economy ?? 'N/A' }),
       );
+    } else if (recovered) {
+      await sendOwnerAlert(watchdogRecoveredAlert({ date: today }));
     }
   } catch (alertError) {
     // 알림 실패는 cron 본 작업을 절대 깨뜨리면 안 됨
