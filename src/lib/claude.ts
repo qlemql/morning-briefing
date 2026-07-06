@@ -292,19 +292,16 @@ export async function generateBriefing(
       // temperature는 첫 시도에선 미지정(API 기본값) — 기존 동작 보존.
       // 재시도에서만 cron이 값을 넘겨 기본과 다른 샘플링 경로로 형식이탈 반복을 깬다.
       ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
-      system: [
-        {
-          type: 'text' as const,
-          text: systemPrompt,
-          cache_control: { type: 'ephemeral' as const },
-        },
-      ],
+      // 프롬프트 캐싱 제거(2026-07-06): 일일 생성은 몇 시간 간격이라 5분 ephemeral 캐시가
+      // 만료돼 거의 안 읽힘(읽기 $0.26 vs 쓰기 $8.86/mo) → 매 호출 1.25x 쓰기 프리미엄만
+      // 내는 역효과였음. 일반 input(1x)으로 되돌려 절감.
+      system: systemPrompt,
       tools: [
         {
           type: 'web_search_20250305',
           name: 'web_search',
           allowed_domains: getAllowedDomains(category),
-          max_uses: 3,
+          max_uses: 2, // 3→2 (2026-07-06 비용절감). 검색비 + 되먹임 input 동시 감소.
         },
       ],
       messages: [
@@ -316,8 +313,9 @@ export async function generateBriefing(
   const usage = message.usage;
   console.log(
     `[Claude] Response received. Stop: ${message.stop_reason}` +
-    ` | Input: ${usage.input_tokens} (cache_read: ${(usage as unknown as Record<string, number>).cache_read_input_tokens || 0})` +
-    ` | Output: ${usage.output_tokens}`,
+    ` | Input: ${usage.input_tokens} (cache_write: ${usage.cache_creation_input_tokens ?? 0}, cache_read: ${usage.cache_read_input_tokens ?? 0})` +
+    ` | Output: ${usage.output_tokens}` +
+    ` | web_search: ${usage.server_tool_use?.web_search_requests ?? 0}`,
   );
 
   // Truncation guard: if max_tokens was hit, the JSON is likely incomplete
@@ -458,8 +456,15 @@ export async function generateBriefing(
     };
   });
 
-  // Record API call for budget tracking
-  await recordCall({ input_tokens: usage.input_tokens, output_tokens: usage.output_tokens });
+  // Record API call for budget tracking — 캐시 쓰기/읽기 + web_search까지 전부 반영
+  // (과거엔 input/output만 세어 실제의 ~22%만 추적 → 한도가 무의미했음. budget.ts 주석 참고.)
+  await recordCall({
+    input_tokens: usage.input_tokens,
+    output_tokens: usage.output_tokens,
+    cache_creation_tokens: usage.cache_creation_input_tokens ?? 0,
+    cache_read_tokens: usage.cache_read_input_tokens ?? 0,
+    web_search_requests: usage.server_tool_use?.web_search_requests ?? 0,
+  });
 
   const result: BriefingCategory = {
     category,

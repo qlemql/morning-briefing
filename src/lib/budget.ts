@@ -4,18 +4,20 @@
  * Tracks ACTUAL token usage costs per API call in Redis.
  * Falls back to in-memory if Redis is not configured.
  *
- * Budget: $5/month hard limit, ~$0.17/day soft limit
- * Claude Sonnet pricing:
- *   Input: $3/M tokens, Output: $15/M tokens
+ * Budget: $12/month hard limit, $1/day guard (2026-07-06 현실화).
+ * Claude Sonnet 4.x pricing ($/M tokens):
+ *   input(비캐시) $3 · output $15 · cache_write(5m) $3.75(1.25x) · cache_read $0.30(0.1x)
+ *   web_search: $10 / 1,000 requests = $0.01/건
  *
- * Cost formula (cents):
- *   (input_tokens * 3 + output_tokens * 15) / 1_000_000 * 100
+ * ⚠️ 과거 버그: recordCall이 output+비캐시input만 세어 실제의 ~22%만 추적 →
+ *    캐시쓰기($8.86/mo)·web_search가 통째로 누락돼 $5 한도가 무의미했고, 실제 ~$16/mo를
+ *    쓰다 크레딧 소진(2026-07-03). 이제 캐시·web_search까지 전부 반영해 한도가 실제로 작동한다.
  */
 
 import { kvGet, kvSet, kvExpire } from './kv';
 
-const DAILY_BUDGET_CENTS = 17; // $5 / 30 days ≈ $0.17/day
-const MONTHLY_BUDGET_CENTS = 500; // $5.00 hard limit
+const DAILY_BUDGET_CENTS = 100; // $1.00/day — 런어웨이 방지용 상한(정상일 ~$0.35)
+const MONTHLY_BUDGET_CENTS = 1200; // $12.00 hard limit (전략 ③ 중간). 불안하면 auto-reload로 ②
 
 function kstToday(): string {
   return new Date(Date.now() + 9 * 3600 * 1000).toISOString().split('T')[0];
@@ -33,11 +35,29 @@ function monthKey(): string {
   return `mb:budget:month:${kstMonth()}`;
 }
 
+/** 실제 청구를 반영한 usage(캐시 쓰기/읽기 + web_search 포함). */
+export interface CallUsage {
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_tokens?: number; // 캐시 쓰기 (5m ephemeral, 1.25x)
+  cache_read_tokens?: number; // 캐시 읽기 (0.1x)
+  web_search_requests?: number; // 서버 web_search 호출 수
+}
+
 /**
- * Calculate cost in cents from token usage.
+ * Calculate cost in cents — 토큰 4종 + web_search를 모두 반영.
+ * (과거엔 input/output만 세어 실제의 ~22%만 추적했음. 상단 주석 참고.)
  */
-function calcCostCents(input_tokens: number, output_tokens: number): number {
-  return (input_tokens * 3 + output_tokens * 15) / 1_000_000 * 100;
+function calcCostCents(u: CallUsage): number {
+  const tokenCents =
+    (u.input_tokens * 3 +
+      u.output_tokens * 15 +
+      (u.cache_creation_tokens ?? 0) * 3.75 +
+      (u.cache_read_tokens ?? 0) * 0.3) /
+    1_000_000 *
+    100;
+  const webSearchCents = (u.web_search_requests ?? 0) * 1; // $0.01 = 1c/건
+  return tokenCents + webSearchCents;
 }
 
 /**
@@ -80,11 +100,8 @@ export async function canAffordCall(): Promise<{
 /**
  * Record an API call with actual token usage (called after successful generation).
  */
-export async function recordCall(usage: {
-  input_tokens: number;
-  output_tokens: number;
-}): Promise<void> {
-  const costCents = calcCostCents(usage.input_tokens, usage.output_tokens);
+export async function recordCall(usage: CallUsage): Promise<void> {
+  const costCents = calcCostCents(usage);
 
   const dKey = dayKey();
   const mKey = monthKey();
