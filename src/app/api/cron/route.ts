@@ -190,9 +190,25 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   // 운영자 알림 (Telegram) — 실패 시 / 워치독 복구 시
   try {
     if (!allOk) {
-      await sendOwnerAlert(
-        `🚨 <b>아침브리핑 생성 실패</b>\n날짜: ${today}\n트리거: ${source}\n결과: ${results.economy ?? 'N/A'}\n\n어드민에서 재생성하세요:\n${adminUrl()}`,
-      );
+      // 크레딧 소진(Anthropic 계정 잔액 부족)은 예산 초과나 일시적 생성 실패와 성격이 완전히 다르다:
+      // 결제 없이는 매일 전면 실패하므로, 일반 실패 알림에 묻히지 않게 별도의 명확한 알림을 보낸다.
+      const failMsgs = categories.map((c) => results[c] ?? '');
+      const creditExhausted = failMsgs.some((m) => /credit balance is too low/i.test(m));
+
+      if (creditExhausted) {
+        await sendOwnerAlert(
+          `🔴 <b>Anthropic 크레딧 소진 — 결제 필요</b>\n` +
+          `날짜: ${today} · 트리거: ${source}\n\n` +
+          `API가 "credit balance too low"를 반환해 브리핑 생성이 <b>전면 중단</b>됐습니다. ` +
+          `지금 사이트는 evergreen 폴백을 서빙 중이며, 충전 전까지 매 실행 실패합니다.\n\n` +
+          `▶ 충전(auto-reload 권장):\nhttps://console.anthropic.com/settings/billing\n\n` +
+          `▶ 충전 후 재생성:\n${adminUrl()}`,
+        );
+      } else {
+        await sendOwnerAlert(
+          `🚨 <b>아침브리핑 생성 실패</b>\n날짜: ${today}\n트리거: ${source}\n결과: ${results.economy ?? 'N/A'}\n\n어드민에서 재생성하세요:\n${adminUrl()}`,
+        );
+      }
     } else if (recovered) {
       await sendOwnerAlert(
         `✅ <b>아침브리핑 자동 복구</b>\n날짜: ${today}\n1차 생성이 빠졌지만 워치독이 재생성했어요.`,

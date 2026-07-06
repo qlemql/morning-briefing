@@ -23,6 +23,15 @@ export async function GET(): Promise<NextResponse> {
     detail: process.env.CRON_SECRET ? 'configured' : 'missing',
   };
 
+  // 2b. Telegram owner-alert 채널 설정 여부 (운영자 알림용).
+  // 미설정이어도 서비스 자체는 정상이므로 ok:true로 두고 detail로만 상태를 노출한다
+  // (uptime 모니터가 알림 미설정 때문에 degraded로 뜨지 않게).
+  const telegramConfigured = !!(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID);
+  checks.telegram = {
+    ok: true,
+    detail: telegramConfigured ? 'configured' : 'MISSING — owner alerts disabled',
+  };
+
   // 3. Redis connectivity
   if (isRedisConfigured()) {
     try {
