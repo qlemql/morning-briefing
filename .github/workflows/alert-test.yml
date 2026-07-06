@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       which:
-        description: '보낼 알림 (all | credit | fail | recovery)'
+        description: '보낼 알림 (all | credit | fail | recovery | complete)'
         default: 'all'
         required: false
 

@@ -9,6 +9,7 @@ import { sendOwnerAlert } from '@/lib/alert';
 import {
   creditExhaustedAlert,
   generationFailedAlert,
+  generationCompletedAlert,
   watchdogRecoveredAlert,
 } from '@/lib/alert-messages';
 import { setCronStatus, type CronSource } from '@/lib/cron-status';
@@ -200,8 +201,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           ? creditExhaustedAlert({ date: today, source })
           : generationFailedAlert({ date: today, source, result: results.economy ?? 'N/A' }),
       );
-    } else if (recovered) {
-      await sendOwnerAlert(watchdogRecoveredAlert({ date: today }));
+    } else if (anyFresh) {
+      // 이번 실행에서 "새로" 생성됐을 때만 알림 — 이미 있던 걸 재확인한 멱등 실행
+      // (아침 트리거 후의 워치독/수동 재실행 등)은 조용히 넘겨 알림 피로를 막는다.
+      const freshCat = categories.find(isFresh) ?? categories[0];
+      const briefing = ServerCache.get(freshCat, today);
+      const cardCount = briefing?.cards.length ?? 0;
+      const firstTitle = briefing?.cards[0]?.title ?? '';
+      await sendOwnerAlert(
+        recovered
+          ? watchdogRecoveredAlert({ date: today }) // 1차 누락을 워치독이 메꾼 특수 케이스
+          : generationCompletedAlert({ date: today, source, cardCount, firstTitle }),
+      );
     }
   } catch (alertError) {
     // 알림 실패는 cron 본 작업을 절대 깨뜨리면 안 됨

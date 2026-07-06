@@ -3,9 +3,12 @@
  * 동일 문구를 쓰도록 한곳에서 관리한다. (미리보기와 실제 알림이 절대 갈리지 않게)
  */
 
+export function siteUrl(): string {
+  return process.env.NEXT_PUBLIC_SITE_URL || 'https://morning-briefing-mocha.vercel.app';
+}
+
 export function adminUrl(): string {
-  const base = process.env.NEXT_PUBLIC_SITE_URL || 'https://morning-briefing-mocha.vercel.app';
-  return `${base}/admin`;
+  return `${siteUrl()}/admin`;
 }
 
 /** 🔴 Anthropic 크레딧 소진 — 결제 필요 (API가 "credit balance too low" 반환 시) */
@@ -31,4 +34,19 @@ export function generationFailedAlert(opts: { date: string; source: string; resu
 /** ✅ 아침브리핑 자동 복구 (1차 생성 누락을 워치독이 재생성) */
 export function watchdogRecoveredAlert(opts: { date: string }): string {
   return `✅ <b>아침브리핑 자동 복구</b>\n날짜: ${opts.date}\n1차 생성이 빠졌지만 워치독이 재생성했어요.`;
+}
+
+/** 🟢 아침브리핑 생성 완료 (정상적으로 새로 생성됐을 때 — 멱등 재실행에는 발송 안 함) */
+export function generationCompletedAlert(opts: {
+  date: string;
+  source: string;
+  cardCount: number;
+  firstTitle: string;
+}): string {
+  const headline = opts.firstTitle ? `\n📰 "${opts.firstTitle}"` : '';
+  return (
+    `🟢 <b>아침브리핑 생성 완료</b>\n` +
+    `날짜: ${opts.date} · 트리거: ${opts.source} · 카드 ${opts.cardCount}장${headline}\n\n` +
+    `${siteUrl()}`
+  );
 }
