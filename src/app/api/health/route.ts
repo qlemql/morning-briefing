@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { isRedisConfigured, kvGet, kvSet } from '@/lib/kv';
-import { getBudgetStatus } from '@/lib/budget';
+import { getBudgetStatus, getCreditRemainingCents, creditLevelFor } from '@/lib/budget';
 import { ServerCache } from '@/lib/server-cache';
 
 /**
@@ -73,6 +73,20 @@ export async function GET(): Promise<NextResponse> {
     };
   } catch {
     checks.budget = { ok: false, detail: 'failed to check' };
+  }
+
+  // 6. Credit ledger (추정 잔액). 저잔액이어도 사이트는 폴백으로 서빙되므로 uptime은 안 깨지게
+  // ok:true로 두고 detail로만 노출(경보는 cron의 텔레그램 저잔액 알림이 담당).
+  try {
+    const remainingCents = await getCreditRemainingCents();
+    checks.credit = {
+      ok: true,
+      detail: remainingCents === null
+        ? 'not seeded'
+        : `~$${(remainingCents / 100).toFixed(2)} (${creditLevelFor(remainingCents)})`,
+    };
+  } catch {
+    checks.credit = { ok: true, detail: 'unavailable' };
   }
 
   const allOk = Object.values(checks).every((c) => c.ok);

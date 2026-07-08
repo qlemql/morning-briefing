@@ -366,6 +366,17 @@ export async function generateBriefing(
     console.warn(`[Claude] Response truncated (max_tokens). Output: ${usage.output_tokens} tokens. Category: ${category}`);
   }
 
+  // 예산/크레딧 기록 — API가 응답한 순간 토큰은 이미 청구됨. 파싱 실패로 이후 throw되더라도
+  // 반드시 여기서 기록해야 "실패한 생성비"가 누락되지 않는다(②). recordCall은 내부에서 실패해도
+  // throw하지 않으므로(fail-safe) 생성 흐름을 깨지 않는다.
+  await recordCall({
+    input_tokens: usage.input_tokens,
+    output_tokens: usage.output_tokens,
+    cache_creation_tokens: usage.cache_creation_input_tokens ?? 0,
+    cache_read_tokens: usage.cache_read_input_tokens ?? 0,
+    web_search_requests: usage.server_tool_use?.web_search_requests ?? 0,
+  });
+
   // Extract text content from potentially multi-block response
   const rawText = extractTextFromResponse(message.content);
 
@@ -486,16 +497,6 @@ export async function generateBriefing(
       // tldr가 비면 해설 표시 안 함(빈 카드 방지)
       beginnerExplanation: beginnerExplanation && beginnerExplanation.tldr ? beginnerExplanation : undefined,
     };
-  });
-
-  // Record API call for budget tracking — 캐시 쓰기/읽기 + web_search까지 전부 반영
-  // (과거엔 input/output만 세어 실제의 ~22%만 추적 → 한도가 무의미했음. budget.ts 주석 참고.)
-  await recordCall({
-    input_tokens: usage.input_tokens,
-    output_tokens: usage.output_tokens,
-    cache_creation_tokens: usage.cache_creation_input_tokens ?? 0,
-    cache_read_tokens: usage.cache_read_input_tokens ?? 0,
-    web_search_requests: usage.server_tool_use?.web_search_requests ?? 0,
   });
 
   const result: BriefingCategory = {

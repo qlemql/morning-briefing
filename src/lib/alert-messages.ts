@@ -41,6 +41,20 @@ export function watchdogRecoveredAlert(opts: { date: string }): string {
   return `✅ <b>아침브리핑 자동 복구</b>\n날짜: ${opts.date}\n1차 생성이 빠졌지만 워치독이 재생성했어요.`;
 }
 
+/** 🟡/🔴 크레딧 잔액 저잔액 경보 (추정 잔액이 임계값 이하일 때, 선제) */
+export function creditLowAlert(opts: { remainingCents: number; level: 'warn' | 'urgent' }): string {
+  const usd = (opts.remainingCents / 100).toFixed(2);
+  const icon = opts.level === 'urgent' ? '🔴' : '🟡';
+  const head = opts.level === 'urgent' ? '크레딧 잔액 긴급 (곧 소진)' : '크레딧 잔액 낮음';
+  return (
+    `${icon} <b>${head}</b>\n` +
+    `추정 잔액: ~$${usd}\n\n` +
+    `방치 시 "credit balance too low"로 생성이 전면 중단됩니다. 충전을 권장해요.\n` +
+    `▶ 충전: https://console.anthropic.com/settings/billing\n\n` +
+    `충전 후엔 원장에 반영하세요 (Credit Ledger 워크플로: topup 또는 set).`
+  );
+}
+
 /** 🟢 아침브리핑 생성 완료 (정상적으로 새로 생성됐을 때 — 멱등 재실행에는 발송 안 함) */
 export function generationCompletedAlert(opts: {
   date: string;

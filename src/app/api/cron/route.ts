@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateBriefing } from '@/lib/claude';
 import { ServerCache } from '@/lib/server-cache';
 import { isRedisConfigured } from '@/lib/kv';
-import { canAffordCall } from '@/lib/budget';
+import { canAffordCall, evaluateCreditAlert } from '@/lib/budget';
 import { formatForAllPlatforms } from '@/lib/sns-formatter';
 import { enqueueSNSPost, isQueueAvailable } from '@/lib/sns-queue';
 import { sendOwnerAlert } from '@/lib/alert';
@@ -10,6 +10,7 @@ import {
   creditExhaustedAlert,
   generationFailedAlert,
   generationCompletedAlert,
+  creditLowAlert,
   watchdogRecoveredAlert,
 } from '@/lib/alert-messages';
 import { setCronStatus, type CronSource } from '@/lib/cron-status';
@@ -217,6 +218,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   } catch (alertError) {
     // 알림 실패는 cron 본 작업을 절대 깨뜨리면 안 됨
     console.warn('[Cron] owner alert failed:', alertError);
+  }
+
+  // 크레딧 저잔액 선제 경보 — 추정 잔액이 $3(경고)/$1(긴급) 이하로 "심각도 상승"할 때만 1회 발송.
+  // (충전 시 원장이 레벨을 ok로 재무장 → 다시 떨어지면 재알림.) 시드 전이면 null → skip.
+  try {
+    const credit = await evaluateCreditAlert();
+    if (credit?.shouldAlert && credit.level !== 'ok') {
+      await sendOwnerAlert(
+        creditLowAlert({ remainingCents: credit.remainingCents, level: credit.level }),
+      );
+    }
+  } catch (creditError) {
+    console.warn('[Cron] credit alert check failed:', creditError);
   }
 
   const elapsed = Date.now() - startTime;
