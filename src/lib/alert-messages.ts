@@ -7,6 +7,11 @@ export function siteUrl(): string {
   return process.env.NEXT_PUBLIC_SITE_URL || 'https://morning-briefing-mocha.vercel.app';
 }
 
+/** Telegram HTML parse_mode 안전용 — 원본 응답 스니펫 등에 <,>,&가 있어도 깨지지 않게. */
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 export function adminUrl(): string {
   return `${siteUrl()}/admin`;
 }
@@ -27,7 +32,7 @@ export function creditExhaustedAlert(opts: { date: string; source: string }): st
 export function generationFailedAlert(opts: { date: string; source: string; result: string }): string {
   return (
     `🚨 <b>아침브리핑 생성 실패</b>\n날짜: ${opts.date}\n트리거: ${opts.source}\n` +
-    `결과: ${opts.result}\n\n어드민에서 재생성하세요:\n${adminUrl()}`
+    `결과: ${escapeHtml(opts.result)}\n\n어드민에서 재생성하세요:\n${adminUrl()}`
   );
 }
 

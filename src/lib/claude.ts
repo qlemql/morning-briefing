@@ -201,6 +201,49 @@ function extractTextFromResponse(content: Anthropic.Messages.ContentBlock[]): st
 }
 
 /**
+ * startIdx의 '{'부터 균형 잡힌 '}'까지의 끝 인덱스(exclusive). 문자열/이스케이프를 인식해
+ * 값 안의 중괄호를 오해하지 않는다(예: content에 "{" 포함). 미완결(잘림)이면 -1.
+ */
+function balancedObjectEnd(text: string, startIdx: number): number {
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let i = startIdx; i < text.length; i++) {
+    const ch = text[i];
+    if (esc) { esc = false; continue; }
+    if (ch === '\\') { esc = true; continue; }
+    if (ch === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (ch === '{') depth++;
+    else if (ch === '}') { depth--; if (depth === 0) return i + 1; }
+  }
+  return -1;
+}
+
+/**
+ * "cards": [ ... ] 배열에서 완결된 카드 객체만 중괄호 균형으로 추출.
+ * 정규식은 2단계 중첩(beginnerExplanation→glossary)을 못 다뤄 실패했으므로 문자열-인식 스캐너로 대체.
+ * 잘려서 마지막 카드가 미완결이면 그 앞까지의 완결 카드만 반환.
+ */
+function recoverCardsFromArray(text: string): unknown[] {
+  const arrMatch = text.match(/"cards"\s*:\s*\[/);
+  if (!arrMatch || arrMatch.index === undefined) return [];
+  let i = text.indexOf('[', arrMatch.index);
+  if (i < 0) return [];
+  i++; // '[' 다음부터
+  const cards: unknown[] = [];
+  while (i < text.length) {
+    while (i < text.length && text[i] !== '{' && text[i] !== ']') i++;
+    if (i >= text.length || text[i] === ']') break;
+    const end = balancedObjectEnd(text, i);
+    if (end < 0) break; // 미완결 카드 → 중단
+    try { cards.push(JSON.parse(text.substring(i, end))); } catch { /* 손상 카드 skip */ }
+    i = end;
+  }
+  return cards;
+}
+
+/**
  * @param opts cron 재시도를 첫 시도와 "의미 있게 다르게" 만들기 위한 옵션.
  *   재시도가 첫 시도와 동일 파라미터면 같은 실패(잘림/형식이탈)를 결정론적으로 반복하므로,
  *   재시도에서만 maxTokens↑(잘림 대응) + temperature 변경(형식이탈 패턴 깸)을 준다.
@@ -334,61 +377,50 @@ export async function generateBriefing(
   // Clean markdown code blocks if present
   const cleaned = rawText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
 
-  // Extract JSON — try multiple strategies
+  // Extract JSON — 여러 전략(응답 형태 변동에 견디도록). 각 전략은 앞선 게 실패했을 때만 시도.
   let parsed: ClaudeResponse | null = null;
 
-  // Strategy 1: Parse the entire cleaned text
+  // Strategy 1: 통째로 파싱
   try {
     parsed = JSON.parse(cleaned);
-  } catch {
-    // Strategy 2: Find the outermost { ... } containing "cards"
-    const start = cleaned.indexOf('{"cards"');
-    if (start >= 0) {
-      // Find matching closing brace
-      let depth = 0;
-      let end = start;
-      for (let i = start; i < cleaned.length; i++) {
-        if (cleaned[i] === '{') depth++;
-        else if (cleaned[i] === '}') { depth--; if (depth === 0) { end = i + 1; break; } }
-      }
-      try {
-        parsed = JSON.parse(cleaned.substring(start, end));
-      } catch {
-        // Strategy 3: Greedy regex
-        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          try { parsed = JSON.parse(jsonMatch[0]); } catch { /* fall through */ }
-        }
+  } catch { /* fall through */ }
+
+  // Strategy 2: 공백 허용으로 {"cards" ...} 블록을 찾아 중괄호 균형(문자열 인식)으로 잘라 파싱.
+  // (과거엔 정확히 `{"cards"` 리터럴만 찾아, 들여쓰기/머리말이 붙으면 놓쳤음.)
+  if (!parsed) {
+    const m = cleaned.match(/\{\s*"cards"/);
+    if (m && m.index !== undefined) {
+      const end = balancedObjectEnd(cleaned, m.index);
+      if (end > m.index) {
+        try { parsed = JSON.parse(cleaned.substring(m.index, end)); } catch { /* fall through */ }
       }
     }
   }
 
-  // Strategy 4: Attempt to repair truncated JSON (max_tokens cutoff)
-  if (!parsed && message.stop_reason === 'max_tokens') {
-    console.warn('[Claude] Attempting truncated JSON repair...');
-    const cardsMatch = cleaned.match(/"cards"\s*:\s*\[/);
-    if (cardsMatch) {
-      // Find all complete card objects {...}
-      const arrayStart = cleaned.indexOf('[', cardsMatch.index!);
-      const cardRegex = /\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g;
-      const cardSection = cleaned.substring(arrayStart);
-      const cards: unknown[] = [];
-      let m: RegExpExecArray | null;
-      while ((m = cardRegex.exec(cardSection)) !== null) {
-        try {
-          cards.push(JSON.parse(m[0]));
-        } catch { /* skip malformed card */ }
-      }
-      if (cards.length > 0) {
-        parsed = { cards: cards as BriefingCard[] };
-        console.log(`[Claude] Recovered ${cards.length} card(s) from truncated response`);
-      }
+  // Strategy 3: 그리디 폴백 — 첫 '{'부터 마지막 '}'까지. (과거엔 Strategy 2 블록 안에 중첩돼
+  // `{"cards"`를 못 찾으면 아예 실행 안 되던 버그가 있었음 → 항상 실행되도록 분리.)
+  if (!parsed) {
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try { parsed = JSON.parse(jsonMatch[0]); } catch { /* fall through */ }
+    }
+  }
+
+  // Strategy 4: 잘림/미완결 복구 — cards 배열에서 완결된 카드만 추출. stop_reason 무관하게
+  // 최후 수단으로 시도(형식 이탈로도 파싱이 실패할 수 있으므로).
+  if (!parsed) {
+    const recovered = recoverCardsFromArray(cleaned);
+    if (recovered.length > 0) {
+      parsed = { cards: recovered as BriefingCard[] };
+      console.log(`[Claude] Recovered ${recovered.length} card(s) from partial response (stop=${message.stop_reason})`);
     }
   }
 
   if (!parsed) {
-    console.error('[Claude] No valid JSON found. Raw:', rawText.substring(0, 500));
-    throw new Error('No JSON found in Claude response');
+    // 진단용: stop_reason + 길이 + 앞부분 스니펫을 에러에 실어 cron 결과/알림/어드민까지 전파.
+    const snippet = rawText.replace(/\s+/g, ' ').slice(0, 300);
+    console.error(`[Claude] No valid JSON found. stop=${message.stop_reason} len=${rawText.length} raw:`, rawText.substring(0, 500));
+    throw new Error(`No JSON found (stop=${message.stop_reason}, len=${rawText.length}): ${snippet}`);
   }
   if (!parsed.cards || !Array.isArray(parsed.cards) || parsed.cards.length === 0) {
     throw new Error('Invalid or empty response structure from Claude');
