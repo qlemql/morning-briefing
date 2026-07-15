@@ -19,6 +19,10 @@ on:
         description: 'generate 시 날짜 YYYY-MM-DD (비우면 오늘)'
         default: ''
         required: false
+      force:
+        description: '캐시 있어도 재생성 (1=강제, 스키마 변경 후 재생성용)'
+        default: '0'
+        required: false
 
 permissions:
   contents: read
@@ -47,6 +51,7 @@ jobs:
             days='${{ github.event.inputs.days }}'; days="${days:-7}"
             qs="backfill=$days"
           fi
+          if [ "${{ github.event.inputs.force }}" = "1" ]; then qs="$qs&force=1"; fi
           echo "GET $SITE_URL/api/lesson?$qs"
           code=$(curl -s -o /tmp/lesson.json -w '%{http_code}' --max-time 290 \
             "$SITE_URL/api/lesson?$qs" \

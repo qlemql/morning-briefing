@@ -9,7 +9,9 @@ export const lessonKey = (date: string) => `mb:lesson:economy:${date}`;
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-/** 슬라이더 하나 = 하나의 변수. key는 formula에서 참조하는 영문 식별자. */
+export type LessonFormat = 'slider' | 'predict' | 'scenario';
+
+/** 변수 하나. key는 formula에서 참조하는 영문 식별자. slider=조절가능, predict=주어진 조건(고정). */
 export interface LessonVariable {
   key: string;
   label: string;
@@ -20,19 +22,49 @@ export interface LessonVariable {
   default: number;
 }
 
-/** 하루치 "만져보는" 인터랙티브 미니 학습 (오늘 브리핑 기반, AI 생성). */
+/** predict: 정답 추측 입력 범위 */
+export interface LessonGuess {
+  label: string;
+  unit: string;
+  min: number;
+  max: number;
+  step: number;
+}
+
+/** scenario: 선택지 하나 (고정 결과값 — formula 없음) */
+export interface LessonChoice {
+  key: string;
+  label: string;
+  resultLabel: string;
+  resultValue: number;
+  resultUnit: string;
+  explain: string;
+  best?: boolean;
+}
+
+/** 하루치 "만져보는" 인터랙티브 미니 학습. format에 따라 쓰이는 필드가 다르다. */
 export interface InteractiveLesson {
   date: string;
+  format: LessonFormat;
   title: string;
   intro: string;
   newsHook: string;
-  variables: LessonVariable[];
-  formula: string; // variables의 key로만 이루어진 산술식 (formula.ts로 안전 평가)
-  resultLabel: string;
-  resultUnit: string;
-  resultExplain: string;
   takeaway: string;
   generatedAt: string;
+
+  // slider · predict 공통 (predict는 variables를 '주어진 조건'으로 고정 표시)
+  variables?: LessonVariable[];
+  formula?: string;
+  resultLabel?: string;
+  resultUnit?: string;
+  resultExplain?: string;
+
+  // predict 전용 (정답 맞히기 입력)
+  guess?: LessonGuess;
+
+  // scenario 전용
+  prompt?: string;
+  choices?: LessonChoice[];
 }
 
 const KEY_RE = /^[a-z][a-z0-9]*$/;
@@ -41,127 +73,204 @@ export type LessonValidation =
   | { ok: true; lesson: InteractiveLesson }
   | { ok: false; reason: string };
 
+function asStr(v: unknown, max = 200): string | null {
+  return typeof v === 'string' && v.trim().length > 0 && v.length <= max ? v.trim() : null;
+}
+
+/** variables 배열 파싱/검증. 실패 시 reason 문자열, 성공 시 배열. */
+function parseVariables(raw: unknown): LessonVariable[] | string {
+  const arr = Array.isArray(raw) ? raw : [];
+  if (arr.length < 1 || arr.length > 3) return `variables count=${arr.length} (need 1-3)`;
+  const seen = new Set<string>();
+  const out: LessonVariable[] = [];
+  for (const rv of arr) {
+    if (!rv || typeof rv !== 'object') return 'a variable is not an object';
+    const v = rv as Record<string, unknown>;
+    const key = typeof v.key === 'string' ? v.key : '';
+    const label = asStr(v.label, 30);
+    const unit = typeof v.unit === 'string' ? v.unit.slice(0, 8) : '';
+    const min = Number(v.min), max = Number(v.max), step = Number(v.step), def = Number(v.default);
+    if (!KEY_RE.test(key)) return `bad key "${key}"`;
+    if (seen.has(key)) return `duplicate key "${key}"`;
+    if (!label) return `variable "${key}" label empty`;
+    if (![min, max, step, def].every(Number.isFinite)) return `variable "${key}" not all finite`;
+    if (!(min < max)) return `variable "${key}" min<max violated`;
+    if (!(step > 0)) return `variable "${key}" step<=0`;
+    if (def < min || def > max) return `variable "${key}" default out of range`;
+    seen.add(key);
+    out.push({ key, label, unit, min, max, step, default: def });
+  }
+  return out;
+}
+
 /**
- * AI 출력 검증 — 하나라도 어긋나면 폐기(reason 포함)해 깨진 위젯이 절대 서빙되지 않게 한다.
- * formula는 기본값에서 evalFormula(안전 평가기)로 실제 계산되는지 확인(임의 코드/미선언 변수 차단).
- * 슬라이더 극단(min/max)은 0나눗셈 등으로 null이 날 수 있으나, 그건 UI가 "—"로 처리하므로
- * 여기서 lesson 전체를 반려하지는 않는다(과반려 방지) — 대신 formulaEdgeWarn으로 기록만.
+ * AI 출력 검증 — format별로 필요한 필드를 검사, 하나라도 어긋나면 reason과 함께 폐기.
+ * formula(slider/predict)는 evalFormula(안전 평가기)로 기본값 계산 성공을 확인 → 임의코드/미선언변수 차단.
  */
 export function validateLesson(raw: unknown, date: string): LessonValidation {
   const fail = (reason: string): LessonValidation => ({ ok: false, reason });
   if (!raw || typeof raw !== 'object') return fail('not an object');
   const o = raw as Record<string, unknown>;
 
-  const str = (v: unknown, max = 200): string | null =>
-    typeof v === 'string' && v.trim().length > 0 && v.length <= max ? v.trim() : null;
+  const format = o.format;
+  if (format !== 'slider' && format !== 'predict' && format !== 'scenario') {
+    return fail(`bad format "${String(format)}"`);
+  }
 
-  const title = str(o.title, 60);
-  const intro = str(o.intro, 300);
-  const resultLabel = str(o.resultLabel, 40);
-  const resultExplain = str(o.resultExplain, 300);
-  const takeaway = str(o.takeaway, 200);
+  const title = asStr(o.title, 60);
+  const intro = asStr(o.intro, 300);
+  const takeaway = asStr(o.takeaway, 200);
   if (!title) return fail('title empty/too long');
   if (!intro) return fail('intro empty/too long');
-  if (!resultLabel) return fail('resultLabel empty/too long');
-  if (!resultExplain) return fail('resultExplain empty/too long');
   if (!takeaway) return fail('takeaway empty/too long');
 
-  const rawVars = Array.isArray(o.variables) ? o.variables : [];
-  if (rawVars.length < 1 || rawVars.length > 3) return fail(`variables count=${rawVars.length} (need 1-3)`);
-
-  const seen = new Set<string>();
-  const variables: LessonVariable[] = [];
-  for (const rv of rawVars) {
-    if (!rv || typeof rv !== 'object') return fail('a variable is not an object');
-    const v = rv as Record<string, unknown>;
-    const key = typeof v.key === 'string' ? v.key : '';
-    const label = str(v.label, 30);
-    const unit = typeof v.unit === 'string' ? v.unit.slice(0, 8) : '';
-    const min = Number(v.min), max = Number(v.max), step = Number(v.step), def = Number(v.default);
-    if (!KEY_RE.test(key)) return fail(`bad key "${key}" (need /^[a-z][a-z0-9]*$/)`);
-    if (seen.has(key)) return fail(`duplicate key "${key}"`);
-    if (!label) return fail(`variable "${key}" label empty`);
-    if (![min, max, step, def].every(Number.isFinite)) return fail(`variable "${key}" min/max/step/default not all finite`);
-    if (!(min < max)) return fail(`variable "${key}" min<max violated (${min},${max})`);
-    if (!(step > 0)) return fail(`variable "${key}" step<=0 (${step})`);
-    if (def < min || def > max) return fail(`variable "${key}" default ${def} out of [${min},${max}]`);
-    seen.add(key);
-    variables.push({ key, label, unit, min, max, step, default: def });
-  }
-
-  const formula = typeof o.formula === 'string' ? o.formula : '';
-  const defaults = Object.fromEntries(variables.map((v) => [v.key, v.default]));
-  // 하드 요건: 기본값에서 유한한 결과. (미선언 변수/문법오류/기본값 0나눗셈이면 여기서 걸림.)
-  if (evalFormula(formula, defaults) === null) {
-    return fail(`formula fails at defaults: "${formula}"`);
-  }
-
-  return {
-    ok: true,
-    lesson: {
-      date,
-      title,
-      intro,
-      newsHook: str(o.newsHook, 80) ?? '',
-      variables,
-      formula,
-      resultLabel,
-      resultUnit: typeof o.resultUnit === 'string' ? o.resultUnit.slice(0, 8) : '',
-      resultExplain,
-      takeaway,
-      generatedAt: new Date().toISOString(),
-    },
+  const base = {
+    date,
+    format: format as LessonFormat,
+    title,
+    intro,
+    newsHook: asStr(o.newsHook, 80) ?? '',
+    takeaway,
+    generatedAt: new Date().toISOString(),
   };
+
+  if (format === 'slider' || format === 'predict') {
+    const vars = parseVariables(o.variables);
+    if (typeof vars === 'string') return fail(vars);
+    const formula = typeof o.formula === 'string' ? o.formula : '';
+    const defaults = Object.fromEntries(vars.map((v) => [v.key, v.default]));
+    if (evalFormula(formula, defaults) === null) return fail(`formula fails at defaults: "${formula}"`);
+    const resultLabel = asStr(o.resultLabel, 40);
+    const resultExplain = asStr(o.resultExplain, 300);
+    if (!resultLabel) return fail('resultLabel empty');
+    if (!resultExplain) return fail('resultExplain empty');
+    const resultUnit = typeof o.resultUnit === 'string' ? o.resultUnit.slice(0, 8) : '';
+
+    if (format === 'predict') {
+      const g = (o.guess ?? {}) as Record<string, unknown>;
+      const gLabel = asStr(g.label, 40);
+      const gUnit = typeof g.unit === 'string' ? g.unit.slice(0, 8) : resultUnit;
+      const gMin = Number(g.min), gMax = Number(g.max), gStep = Number(g.step);
+      if (!gLabel) return fail('guess.label empty');
+      if (![gMin, gMax, gStep].every(Number.isFinite)) return fail('guess min/max/step not finite');
+      if (!(gMin < gMax)) return fail('guess min<max violated');
+      if (!(gStep > 0)) return fail('guess step<=0');
+      return { ok: true, lesson: { ...base, variables: vars, formula, resultLabel, resultUnit, resultExplain, guess: { label: gLabel, unit: gUnit, min: gMin, max: gMax, step: gStep } } };
+    }
+    return { ok: true, lesson: { ...base, variables: vars, formula, resultLabel, resultUnit, resultExplain } };
+  }
+
+  // scenario
+  const prompt = asStr(o.prompt, 200);
+  if (!prompt) return fail('prompt empty');
+  const rawChoices = Array.isArray(o.choices) ? o.choices : [];
+  if (rawChoices.length < 2 || rawChoices.length > 4) return fail(`choices count=${rawChoices.length} (need 2-4)`);
+  const seen = new Set<string>();
+  const choices: LessonChoice[] = [];
+  for (const rc of rawChoices) {
+    if (!rc || typeof rc !== 'object') return fail('a choice is not an object');
+    const c = rc as Record<string, unknown>;
+    const key = typeof c.key === 'string' ? c.key : '';
+    const label = asStr(c.label, 30);
+    const resultLabel = asStr(c.resultLabel, 40);
+    const explain = asStr(c.explain, 200);
+    const resultValue = Number(c.resultValue);
+    if (!KEY_RE.test(key)) return fail(`choice bad key "${key}"`);
+    if (seen.has(key)) return fail(`choice duplicate key "${key}"`);
+    if (!label) return fail('choice label empty');
+    if (!resultLabel) return fail('choice resultLabel empty');
+    if (!explain) return fail('choice explain empty');
+    if (!Number.isFinite(resultValue)) return fail(`choice "${key}" resultValue not finite`);
+    seen.add(key);
+    choices.push({
+      key, label, resultLabel, resultValue,
+      resultUnit: typeof c.resultUnit === 'string' ? c.resultUnit.slice(0, 8) : '',
+      explain,
+      best: c.best === true,
+    });
+  }
+  return { ok: true, lesson: { ...base, prompt, choices } };
 }
 
 const SUBMIT_LESSON_TOOL: Anthropic.Messages.Tool = {
   name: 'submit_lesson',
-  description: '오늘 뉴스로 만드는 인터랙티브 학습(슬라이더를 움직이면 숫자가 실시간 변하는 미니 시나리오)을 제출한다.',
+  description: '오늘 뉴스로 만드는 인터랙티브 학습을 제출한다. 개념에 가장 맞는 format을 하나 골라 해당 필드만 채운다.',
   input_schema: {
     type: 'object',
     properties: {
-      title: { type: 'string', description: '오늘 뉴스와 연결된 제목 (예: "관세 20%가 유가에 미치는 영향")' },
+      format: {
+        type: 'string',
+        enum: ['slider', 'predict', 'scenario'],
+        description:
+          'slider=값을 바꾸면 결과가 실시간 변하는 연속 인과(금리→이자). ' +
+          'predict=먼저 정답을 맞혀보고 공개(직관 깨기, 놀라움). ' +
+          'scenario=갈림길에서 선택하면 결과 비교(의사결정·기회비용). 개념에 가장 맞는 하나.',
+      },
+      title: { type: 'string', description: '오늘 뉴스와 연결된 제목' },
       intro: { type: 'string', description: '1~2문장 맥락' },
       newsHook: { type: 'string', description: '어느 카드/헤드라인에서 나왔는지' },
+      takeaway: { type: 'string', description: '한 줄 교훈' },
+
+      // slider · predict
       variables: {
         type: 'array',
-        description: '슬라이더 1~3개. 각 key는 영문 소문자 식별자(formula에서 참조).',
+        description: '[slider/predict] 변수 1~3개. key는 영문 소문자(formula에서 참조). slider는 조절가능, predict는 주어진 조건(고정).',
         items: {
           type: 'object',
           properties: {
-            key: { type: 'string', description: '영문 소문자 식별자 (예: oil, tariff, rate)' },
-            label: { type: 'string', description: '한글 라벨 (예: 유가)' },
-            unit: { type: 'string', description: '단위 (예: $, %, 원, 만원)' },
-            min: { type: 'number' },
-            max: { type: 'number' },
-            step: { type: 'number' },
-            default: { type: 'number' },
+            key: { type: 'string' }, label: { type: 'string' }, unit: { type: 'string' },
+            min: { type: 'number' }, max: { type: 'number' }, step: { type: 'number' }, default: { type: 'number' },
           },
           required: ['key', 'label', 'unit', 'min', 'max', 'step', 'default'],
         },
       },
-      formula: {
-        type: 'string',
-        description: '변수 key로만 이루어진 산술식. + - * / % 와 괄호만 사용. 예: "oil * (1 + tariff / 100)". 함수·거듭제곱(**)·다른 이름 금지.',
+      formula: { type: 'string', description: '[slider/predict] 변수 key로만 이루어진 산술식. + - * / % 와 괄호만. 함수·거듭제곱(**) 금지.' },
+      resultLabel: { type: 'string', description: '[slider/predict] 결과 라벨' },
+      resultUnit: { type: 'string', description: '[slider/predict] 결과 단위' },
+      resultExplain: { type: 'string', description: '[slider/predict] 결과가 뭘 의미하는지' },
+      guess: {
+        type: 'object',
+        description: '[predict 전용] 사용자가 정답을 추측할 슬라이더 범위(정답이 이 범위 안에 오게).',
+        properties: {
+          label: { type: 'string' }, unit: { type: 'string' },
+          min: { type: 'number' }, max: { type: 'number' }, step: { type: 'number' },
+        },
+        required: ['label', 'unit', 'min', 'max', 'step'],
       },
-      resultLabel: { type: 'string', description: '결과 라벨 (예: 예상 소비자가)' },
-      resultUnit: { type: 'string', description: '결과 단위' },
-      resultExplain: { type: 'string', description: '이 숫자가 뭘 의미하는지 쉬운 설명' },
-      takeaway: { type: 'string', description: '한 줄 교훈' },
+
+      // scenario
+      prompt: { type: 'string', description: '[scenario 전용] "당신이라면?" 갈림길 질문' },
+      choices: {
+        type: 'array',
+        description: '[scenario 전용] 선택지 2~4개. 각 결과는 고정 숫자(resultValue).',
+        items: {
+          type: 'object',
+          properties: {
+            key: { type: 'string', description: '영문 소문자 식별자' },
+            label: { type: 'string', description: '선택지 이름 (예: 예금)' },
+            resultLabel: { type: 'string', description: '결과 라벨 (예: 5년 뒤)' },
+            resultValue: { type: 'number' },
+            resultUnit: { type: 'string' },
+            explain: { type: 'string', description: '왜 이런 결과인지' },
+            best: { type: 'boolean', description: '가장 유리한 선택이면 true' },
+          },
+          required: ['key', 'label', 'resultLabel', 'resultValue', 'explain'],
+        },
+      },
     },
-    required: ['title', 'intro', 'variables', 'formula', 'resultLabel', 'resultExplain', 'takeaway'],
+    required: ['format', 'title', 'intro', 'takeaway'],
   },
 };
 
 export interface LessonGenResult {
   lesson: InteractiveLesson | null;
-  reason?: string; // 실패 시 원인 (검증 반려/생성 오류/예산)
-  raw?: unknown; // 검증 반려 시 모델 원본 출력(디버깅용)
+  reason?: string;
+  raw?: unknown;
 }
 
 /**
- * 특정 날짜의 브리핑을 입력으로 인터랙티브 학습을 생성한다(web_search 없음 — 컨텍스트는 브리핑에 다 있음).
- * 예산가드 통과 시에만 호출. 실패 시 lesson=null + reason(+raw)로 원인을 함께 반환(호출부가 폴백/노출).
+ * 특정 날짜의 브리핑을 입력으로 인터랙티브 학습을 생성(web_search 없음). 예산가드 통과 시에만.
+ * 실패 시 lesson=null + reason(+raw)로 원인을 함께 반환.
  */
 export async function generateInteractiveLesson(
   briefing: BriefingCategory,
@@ -183,11 +292,12 @@ export async function generateInteractiveLesson(
     .join('\n\n');
 
   const system =
-    '너는 경제 교육 디자이너다. 오늘 브리핑에서 "숫자로 체감되는" 개념 하나를 골라, 독자가 슬라이더를 ' +
-    '움직이면 결과가 실시간으로 바뀌는 아주 단순한 인터랙티브 학습을 설계한다. 규칙: ' +
-    '(1) 슬라이더 1~3개, 각 변수 key는 영문 소문자. (2) formula는 그 key들로만 이루어진 산술식(+ - * / % 와 괄호만). ' +
-    '(3) 거듭제곱(**), 함수, 다른 이름 절대 금지. (4) min/max/step/default는 현실적인 범위. ' +
-    '(5) 초보자도 "오 그렇구나" 할 만큼 쉽고 오늘 뉴스와 직접 연결. 반드시 submit_lesson 도구로 제출.';
+    '너는 경제 교육 디자이너다. 오늘 브리핑에서 "숫자로 체감되는" 개념 하나를 골라, 초보자가 능동적으로 ' +
+    '이해할 인터랙티브 학습을 설계한다. 세 가지 format 중 개념에 가장 맞는 하나를 고른다: ' +
+    'slider(값→결과 연속 인과), predict(먼저 맞혀보고 공개, 놀라움), scenario(선택→결과 비교, 의사결정). ' +
+    '규칙: (1) slider/predict의 formula는 변수 key로만 이루어진 산술식(+ - * / % 와 괄호만, 함수·**금지). ' +
+    '(2) predict는 정답이 guess 범위 안에 오게. (3) scenario의 각 선택 결과는 고정 숫자(resultValue). ' +
+    '(4) 오늘 뉴스와 직접 연결, 초보자도 "오 그렇구나" 하게 쉽게. 반드시 submit_lesson 도구로 제출.';
 
   const userPrompt =
     `오늘(${date}) 브리핑입니다:\n\n${cardsText}\n\n` +
@@ -199,7 +309,7 @@ export async function generateInteractiveLesson(
       max_tokens: 1500,
       system,
       tools: [SUBMIT_LESSON_TOOL],
-      tool_choice: { type: 'tool', name: 'submit_lesson' }, // web_search 없으니 도구 강제 = 구조화 보장
+      tool_choice: { type: 'tool', name: 'submit_lesson' },
       messages: [{ role: 'user', content: userPrompt }],
     });
 
@@ -219,7 +329,7 @@ export async function generateInteractiveLesson(
       console.warn(`[Lesson] ${date} rejected: ${v.reason}`);
       return { lesson: null, reason: v.reason, raw: toolUse?.input };
     }
-    console.log(`[Lesson] ${date} generated: "${v.lesson.title}" (${v.lesson.variables.length} vars)`);
+    console.log(`[Lesson] ${date} generated (${v.lesson.format}): "${v.lesson.title}"`);
     return { lesson: v.lesson };
   } catch (err) {
     console.error(`[Lesson] ${date} generation failed:`, err);

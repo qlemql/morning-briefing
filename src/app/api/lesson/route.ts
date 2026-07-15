@@ -33,6 +33,7 @@ async function generateAndCache(date: string): Promise<{ lesson: InteractiveLess
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const sp = request.nextUrl.searchParams;
   const isOwner = request.headers.get('authorization') === `Bearer ${process.env.CRON_SECRET}`;
+  const force = sp.get('force') === '1'; // 캐시 있어도 재생성 (스키마 변경 후 재생성용)
 
   // 백필: 과거 아카이브 날짜들에 레슨 생성 (owner 전용)
   const backfillN = parseInt(sp.get('backfill') || '', 10);
@@ -42,9 +43,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const dates = (await ServerCache.listArchiveDates('economy', 365)).sort().reverse().slice(0, n);
     const results: Record<string, string> = {};
     for (const d of dates) {
-      if (await readLesson(d)) { results[d] = 'exists'; continue; }
+      if (!force && await readLesson(d)) { results[d] = 'exists'; continue; }
       const r = await generateAndCache(d);
-      results[d] = r.lesson ? `ok: ${r.lesson.title}` : `fail: ${r.reason ?? 'unknown'}`;
+      results[d] = r.lesson ? `ok(${r.lesson.format}): ${r.lesson.title}` : `fail: ${r.reason ?? 'unknown'}`;
     }
     return NextResponse.json({ ok: true, backfilled: results });
   }
@@ -57,8 +58,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   // 생성(단일 날짜, owner 전용) — 비용 발생하므로 인증 필요
   if (sp.get('generate') === '1') {
     if (!isOwner) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const existing = await readLesson(date);
-    if (existing) return NextResponse.json({ ok: true, cached: true, lesson: existing });
+    if (!force) {
+      const existing = await readLesson(date);
+      if (existing) return NextResponse.json({ ok: true, cached: true, lesson: existing });
+    }
     const r = await generateAndCache(date);
     return NextResponse.json(
       { ok: !!r.lesson, lesson: r.lesson ?? null, reason: r.reason, raw: r.raw },
