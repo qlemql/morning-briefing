@@ -33,12 +33,19 @@ export interface InteractiveLesson {
 
 const KEY_RE = /^[a-z][a-z0-9]*$/;
 
+export type LessonValidation =
+  | { ok: true; lesson: InteractiveLesson }
+  | { ok: false; reason: string };
+
 /**
- * AI 출력 검증 — 하나라도 어긋나면 폐기(null)해서 깨진 위젯이 절대 서빙되지 않게 한다.
- * 특히 formula는 evalFormula(안전 평가기)로 실제 계산이 되는지 확인 → 임의 코드/미선언 변수 차단.
+ * AI 출력 검증 — 하나라도 어긋나면 폐기(reason 포함)해 깨진 위젯이 절대 서빙되지 않게 한다.
+ * formula는 기본값에서 evalFormula(안전 평가기)로 실제 계산되는지 확인(임의 코드/미선언 변수 차단).
+ * 슬라이더 극단(min/max)은 0나눗셈 등으로 null이 날 수 있으나, 그건 UI가 "—"로 처리하므로
+ * 여기서 lesson 전체를 반려하지는 않는다(과반려 방지) — 대신 formulaEdgeWarn으로 기록만.
  */
-export function validateLesson(raw: unknown, date: string): InteractiveLesson | null {
-  if (!raw || typeof raw !== 'object') return null;
+export function validateLesson(raw: unknown, date: string): LessonValidation {
+  const fail = (reason: string): LessonValidation => ({ ok: false, reason });
+  if (!raw || typeof raw !== 'object') return fail('not an object');
   const o = raw as Record<string, unknown>;
 
   const str = (v: unknown, max = 200): string | null =>
@@ -49,50 +56,57 @@ export function validateLesson(raw: unknown, date: string): InteractiveLesson | 
   const resultLabel = str(o.resultLabel, 40);
   const resultExplain = str(o.resultExplain, 300);
   const takeaway = str(o.takeaway, 200);
-  if (!title || !intro || !resultLabel || !resultExplain || !takeaway) return null;
+  if (!title) return fail('title empty/too long');
+  if (!intro) return fail('intro empty/too long');
+  if (!resultLabel) return fail('resultLabel empty/too long');
+  if (!resultExplain) return fail('resultExplain empty/too long');
+  if (!takeaway) return fail('takeaway empty/too long');
 
   const rawVars = Array.isArray(o.variables) ? o.variables : [];
-  if (rawVars.length < 1 || rawVars.length > 3) return null;
+  if (rawVars.length < 1 || rawVars.length > 3) return fail(`variables count=${rawVars.length} (need 1-3)`);
 
   const seen = new Set<string>();
   const variables: LessonVariable[] = [];
   for (const rv of rawVars) {
-    if (!rv || typeof rv !== 'object') return null;
+    if (!rv || typeof rv !== 'object') return fail('a variable is not an object');
     const v = rv as Record<string, unknown>;
     const key = typeof v.key === 'string' ? v.key : '';
     const label = str(v.label, 30);
     const unit = typeof v.unit === 'string' ? v.unit.slice(0, 8) : '';
     const min = Number(v.min), max = Number(v.max), step = Number(v.step), def = Number(v.default);
-    if (!KEY_RE.test(key) || seen.has(key) || !label) return null;
-    if (![min, max, step, def].every(Number.isFinite)) return null;
-    if (!(min < max) || !(step > 0) || def < min || def > max) return null;
+    if (!KEY_RE.test(key)) return fail(`bad key "${key}" (need /^[a-z][a-z0-9]*$/)`);
+    if (seen.has(key)) return fail(`duplicate key "${key}"`);
+    if (!label) return fail(`variable "${key}" label empty`);
+    if (![min, max, step, def].every(Number.isFinite)) return fail(`variable "${key}" min/max/step/default not all finite`);
+    if (!(min < max)) return fail(`variable "${key}" min<max violated (${min},${max})`);
+    if (!(step > 0)) return fail(`variable "${key}" step<=0 (${step})`);
+    if (def < min || def > max) return fail(`variable "${key}" default ${def} out of [${min},${max}]`);
     seen.add(key);
     variables.push({ key, label, unit, min, max, step, default: def });
   }
 
   const formula = typeof o.formula === 'string' ? o.formula : '';
   const defaults = Object.fromEntries(variables.map((v) => [v.key, v.default]));
-  // 기본값 + 각 변수의 min/max 조합에서 유한한 결과가 나와야 통과(런타임 null 최소화).
-  const testPoints = [defaults];
-  for (const v of variables) {
-    testPoints.push({ ...defaults, [v.key]: v.min }, { ...defaults, [v.key]: v.max });
-  }
-  for (const pt of testPoints) {
-    if (evalFormula(formula, pt) === null) return null;
+  // 하드 요건: 기본값에서 유한한 결과. (미선언 변수/문법오류/기본값 0나눗셈이면 여기서 걸림.)
+  if (evalFormula(formula, defaults) === null) {
+    return fail(`formula fails at defaults: "${formula}"`);
   }
 
   return {
-    date,
-    title,
-    intro,
-    newsHook: str(o.newsHook, 80) ?? '',
-    variables,
-    formula,
-    resultLabel,
-    resultUnit: typeof o.resultUnit === 'string' ? o.resultUnit.slice(0, 8) : '',
-    resultExplain,
-    takeaway,
-    generatedAt: new Date().toISOString(),
+    ok: true,
+    lesson: {
+      date,
+      title,
+      intro,
+      newsHook: str(o.newsHook, 80) ?? '',
+      variables,
+      formula,
+      resultLabel,
+      resultUnit: typeof o.resultUnit === 'string' ? o.resultUnit.slice(0, 8) : '',
+      resultExplain,
+      takeaway,
+      generatedAt: new Date().toISOString(),
+    },
   };
 }
 
@@ -135,18 +149,24 @@ const SUBMIT_LESSON_TOOL: Anthropic.Messages.Tool = {
   },
 };
 
+export interface LessonGenResult {
+  lesson: InteractiveLesson | null;
+  reason?: string; // 실패 시 원인 (검증 반려/생성 오류/예산)
+  raw?: unknown; // 검증 반려 시 모델 원본 출력(디버깅용)
+}
+
 /**
  * 특정 날짜의 브리핑을 입력으로 인터랙티브 학습을 생성한다(web_search 없음 — 컨텍스트는 브리핑에 다 있음).
- * 예산가드 통과 시에만 호출하며, 검증 실패/생성 실패면 null(호출부가 폴백 처리).
+ * 예산가드 통과 시에만 호출. 실패 시 lesson=null + reason(+raw)로 원인을 함께 반환(호출부가 폴백/노출).
  */
 export async function generateInteractiveLesson(
   briefing: BriefingCategory,
   date: string,
-): Promise<InteractiveLesson | null> {
+): Promise<LessonGenResult> {
   const budget = await canAffordCall();
   if (!budget.allowed) {
     console.warn('[Lesson] budget exceeded — skip generation');
-    return null;
+    return { lesson: null, reason: 'budget exceeded' };
   }
 
   const cardsText = briefing.cards
@@ -190,15 +210,15 @@ export async function generateInteractiveLesson(
     const toolUse = message.content.find(
       (b): b is Anthropic.Messages.ToolUseBlock => b.type === 'tool_use' && b.name === 'submit_lesson',
     );
-    const lesson = validateLesson(toolUse?.input, date);
-    if (!lesson) {
-      console.warn(`[Lesson] ${date} — validation failed or no tool output`);
-      return null;
+    const v = validateLesson(toolUse?.input, date);
+    if (!v.ok) {
+      console.warn(`[Lesson] ${date} rejected: ${v.reason}`);
+      return { lesson: null, reason: v.reason, raw: toolUse?.input };
     }
-    console.log(`[Lesson] ${date} generated: "${lesson.title}" (${lesson.variables.length} vars)`);
-    return lesson;
+    console.log(`[Lesson] ${date} generated: "${v.lesson.title}" (${v.lesson.variables.length} vars)`);
+    return { lesson: v.lesson };
   } catch (err) {
     console.error(`[Lesson] ${date} generation failed:`, err);
-    return null;
+    return { lesson: null, reason: err instanceof Error ? err.message : 'generation error' };
   }
 }

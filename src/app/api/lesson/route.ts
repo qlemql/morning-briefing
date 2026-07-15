@@ -19,13 +19,13 @@ async function readLesson(date: string): Promise<InteractiveLesson | null> {
   try { return JSON.parse(raw) as InteractiveLesson; } catch { return null; }
 }
 
-/** 해당 날짜 아카이브 브리핑으로 레슨 생성 후 캐시. 실패 시 null. */
-async function generateAndCache(date: string): Promise<InteractiveLesson | null> {
+/** 해당 날짜 아카이브 브리핑으로 레슨 생성 후 캐시. 실패 시 reason 포함. */
+async function generateAndCache(date: string): Promise<{ lesson: InteractiveLesson | null; reason?: string; raw?: unknown }> {
   const briefing = await ServerCache.getArchive('economy', date);
-  if (!briefing || !briefing.cards?.length) return null;
-  const lesson = await generateInteractiveLesson(briefing, date);
-  if (lesson) await kvSet(lessonKey(date), JSON.stringify(lesson), LESSON_TTL);
-  return lesson;
+  if (!briefing || !briefing.cards?.length) return { lesson: null, reason: 'no archived briefing for date' };
+  const r = await generateInteractiveLesson(briefing, date);
+  if (r.lesson) await kvSet(lessonKey(date), JSON.stringify(r.lesson), LESSON_TTL);
+  return r;
 }
 
 /**
@@ -47,8 +47,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const results: Record<string, string> = {};
     for (const d of dates) {
       if (await readLesson(d)) { results[d] = 'exists'; continue; }
-      const lesson = await generateAndCache(d);
-      results[d] = lesson ? `ok: ${lesson.title}` : 'fail';
+      const r = await generateAndCache(d);
+      results[d] = r.lesson ? `ok: ${r.lesson.title}` : `fail: ${r.reason ?? 'unknown'}`;
     }
     return NextResponse.json({ ok: true, backfilled: results });
   }
@@ -63,10 +63,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (!isOwner) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const existing = await readLesson(date);
     if (existing) return NextResponse.json({ ok: true, cached: true, lesson: existing });
-    const lesson = await generateAndCache(date);
+    const r = await generateAndCache(date);
     return NextResponse.json(
-      { ok: !!lesson, lesson: lesson ?? null },
-      { status: lesson ? 200 : 502 },
+      { ok: !!r.lesson, lesson: r.lesson ?? null, reason: r.reason, raw: r.raw },
+      { status: r.lesson ? 200 : 502 },
     );
   }
 
