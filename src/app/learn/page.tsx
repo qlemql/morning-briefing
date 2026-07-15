@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useRef, type ReactNode } from 'react';
+import { useState, useRef, useEffect, type ReactNode } from 'react';
 import Link from 'next/link';
+import { evalFormula } from '@/lib/formula';
+import type { InteractiveLesson } from '@/lib/lesson';
 
 /* ────────── helpers ────────── */
 
@@ -294,6 +296,74 @@ function Fx() {
 }
 
 /* ────────── page ────────── */
+/* ────────── 오늘의 뉴스로 만져보기 (AI 생성, 동적) ────────── */
+function fmtNum(v: number, unit: string): string {
+  const n = Number.isInteger(v)
+    ? v.toLocaleString()
+    : v.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  return unit === '$' ? `$${n}` : `${n}${unit || ''}`;
+}
+
+function DynamicLesson() {
+  const [lesson, setLesson] = useState<InteractiveLesson | null>(null);
+  const [vals, setVals] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/lesson')
+      .then((r) => r.json())
+      .then((d) => {
+        if (!alive || !d?.lesson) return;
+        const L = d.lesson as InteractiveLesson;
+        setLesson(L);
+        setVals(Object.fromEntries(L.variables.map((v) => [v.key, v.default])));
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  if (!lesson) return null;
+  const out = evalFormula(lesson.formula, vals);
+
+  return (
+    <Card
+      emoji="📰"
+      title={lesson.title}
+      hook={lesson.intro}
+      takeaway={lesson.takeaway}
+      detail={
+        <>
+          <p>{lesson.resultExplain}</p>
+          {lesson.newsHook && (
+            <p className="text-gray-400 dark:text-gray-500">오늘 브리핑: {lesson.newsHook}</p>
+          )}
+          <p className="text-gray-400 dark:text-gray-500">오늘 뉴스로 AI가 만든 학습이에요.</p>
+        </>
+      }
+    >
+      <div className="space-y-3 mb-4">
+        {lesson.variables.map((v) => (
+          <Slider
+            key={v.key}
+            label={v.label}
+            value={vals[v.key] ?? v.default}
+            min={v.min}
+            max={v.max}
+            step={v.step}
+            onChange={(nv) => setVals((s) => ({ ...s, [v.key]: nv }))}
+            fmt={(x) => fmtNum(x, v.unit)}
+          />
+        ))}
+      </div>
+      <Result
+        value={out === null ? '—' : fmtNum(Math.round(out * 100) / 100, lesson.resultUnit)}
+        label={lesson.resultLabel}
+        tone="teal"
+      />
+    </Card>
+  );
+}
+
 export default function LearnPage() {
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-[#111111]">
@@ -324,6 +394,13 @@ export default function LearnPage() {
             <span className="text-gray-400 dark:text-gray-600"> (학습 실험 · 데모)</span>
           </p>
         </header>
+        {/* 오늘 뉴스 기반 동적 학습 (없으면 자동으로 숨김) */}
+        <DynamicLesson />
+
+        {/* 기초 개념 — 늘 유용한 계산기 */}
+        <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 mt-7 mb-2 px-1 uppercase tracking-wide">
+          기초 개념
+        </h2>
         <div className="space-y-4">
           <BaseRate />
           <Compound />
