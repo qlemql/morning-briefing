@@ -16,7 +16,12 @@ on:
   schedule:
     - cron: '15 22 * * *'  # 07:15 KST — 1차 외부 트리거 (Vercel 07:00 이후, 자동게시 06:50 이후)
     - cron: '0 1 * * *'    # 10:00 KST — 워치독 재검증
-  workflow_dispatch: {}     # 수동 실행 버튼
+  workflow_dispatch:        # 수동 실행 버튼
+    inputs:
+      force:
+        description: '오늘자가 이미 있어도 강제 재생성 (1=강제)'
+        default: '0'
+        required: false
 
 permissions:
   contents: read
@@ -46,9 +51,12 @@ jobs:
           # 워치독 스케줄(10:00 KST)이면 source=watchdog, 아니면 일반
           src="manual"
           if [ "${{ github.event.schedule }}" = "0 1 * * *" ]; then src="watchdog"; fi
-          echo "POST $SITE_URL/api/cron?source=$src"
+          # 수동 실행에서 force=1이면 강제 재생성
+          qs="source=$src"
+          if [ "${{ github.event.inputs.force }}" = "1" ]; then qs="$qs&force=1"; fi
+          echo "POST $SITE_URL/api/cron?$qs"
           code=$(curl -s -o /tmp/cron.json -w '%{http_code}' --max-time 290 \
-            "$SITE_URL/api/cron?source=$src" \
+            "$SITE_URL/api/cron?$qs" \
             -H "Authorization: Bearer $CRON_SECRET" || echo 000)
           echo "HTTP $code"
           echo "----- response -----"; cat /tmp/cron.json || true; echo
