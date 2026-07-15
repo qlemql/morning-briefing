@@ -310,7 +310,10 @@ function DynamicLesson() {
 
   useEffect(() => {
     let alive = true;
-    fetch('/api/lesson')
+    // 테스트/백필 열람용: /learn?date=YYYY-MM-DD 로 과거 날짜 레슨도 볼 수 있음(없으면 오늘).
+    const qsDate = new URLSearchParams(window.location.search).get('date');
+    const url = qsDate ? `/api/lesson?date=${encodeURIComponent(qsDate)}` : '/api/lesson';
+    fetch(url)
       .then((r) => r.json())
       .then((d) => {
         if (!alive || !d?.lesson) return;
