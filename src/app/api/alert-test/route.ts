@@ -5,6 +5,7 @@ import {
   generationFailedAlert,
   generationCompletedAlert,
   creditLowAlert,
+  lessonReadyAlert,
   watchdogRecoveredAlert,
 } from '@/lib/alert-messages';
 
@@ -14,7 +15,7 @@ import {
  * owner-only (CRON_SECRET). 실제 장애가 아님을 알 수 있게 각 메시지 앞에 [테스트] 배너를 붙인다.
  * 실제 알림과 동일한 빌더(@/lib/alert-messages)를 쓰므로 미리보기와 실제 문구가 갈리지 않는다.
  *
- * ?which=all(기본) | credit | fail | recovery | complete | lowcredit
+ * ?which=all(기본) | credit | fail | recovery | complete | lowcredit | lesson
  */
 
 const TEST_BANNER = '🧪 <b>[테스트 알림]</b> 실제 상황 아님 — 알림 파이프라인 점검용\n\n';
@@ -49,6 +50,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       firstTitle: '(테스트) SK하이닉스, 45조 들고 나스닥 간다',
     }),
     lowcredit: creditLowAlert({ remainingCents: 280, level: 'warn' }),
+    lesson: lessonReadyAlert({ date: today, title: '(테스트) 금리 오르면 내 대출 이자 얼마나 늘어날까?' }),
   };
 
   const which = request.nextUrl.searchParams.get('which') || 'all';

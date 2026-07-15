@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { kvGet, kvSet } from '@/lib/kv';
+import { kvGet } from '@/lib/kv';
 import { ServerCache } from '@/lib/server-cache';
-import { generateInteractiveLesson, type InteractiveLesson } from '@/lib/lesson';
+import { generateAndCacheLesson, lessonKey, type InteractiveLesson } from '@/lib/lesson';
 
 export const maxDuration = 300;
 
-const LESSON_TTL = 86400 * 400; // 400일 (아카이브와 함께 장기 보관)
-const lessonKey = (date: string) => `mb:lesson:economy:${date}`;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function todayKST(): string {
@@ -23,9 +21,7 @@ async function readLesson(date: string): Promise<InteractiveLesson | null> {
 async function generateAndCache(date: string): Promise<{ lesson: InteractiveLesson | null; reason?: string; raw?: unknown }> {
   const briefing = await ServerCache.getArchive('economy', date);
   if (!briefing || !briefing.cards?.length) return { lesson: null, reason: 'no archived briefing for date' };
-  const r = await generateInteractiveLesson(briefing, date);
-  if (r.lesson) await kvSet(lessonKey(date), JSON.stringify(r.lesson), LESSON_TTL);
-  return r;
+  return generateAndCacheLesson(briefing, date);
 }
 
 /**

@@ -2,6 +2,10 @@ import Anthropic from '@anthropic-ai/sdk';
 import { BriefingCategory } from './types';
 import { canAffordCall, recordCall } from './budget';
 import { evalFormula } from './formula';
+import { kvSet } from './kv';
+
+const LESSON_TTL = 86400 * 400; // 400일 (아카이브와 함께 장기 보관)
+export const lessonKey = (date: string) => `mb:lesson:economy:${date}`;
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -221,4 +225,14 @@ export async function generateInteractiveLesson(
     console.error(`[Lesson] ${date} generation failed:`, err);
     return { lesson: null, reason: err instanceof Error ? err.message : 'generation error' };
   }
+}
+
+/** 생성 + 성공 시 Redis 캐시까지. cron·API가 공용으로 사용. */
+export async function generateAndCacheLesson(
+  briefing: BriefingCategory,
+  date: string,
+): Promise<LessonGenResult> {
+  const r = await generateInteractiveLesson(briefing, date);
+  if (r.lesson) await kvSet(lessonKey(date), JSON.stringify(r.lesson), LESSON_TTL);
+  return r;
 }

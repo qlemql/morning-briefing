@@ -11,8 +11,10 @@ import {
   generationFailedAlert,
   generationCompletedAlert,
   creditLowAlert,
+  lessonReadyAlert,
   watchdogRecoveredAlert,
 } from '@/lib/alert-messages';
+import { generateAndCacheLesson } from '@/lib/lesson';
 import { setCronStatus, type CronSource } from '@/lib/cron-status';
 
 export const maxDuration = 300;
@@ -225,6 +227,32 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     console.warn('[Cron] owner alert failed:', alertError);
   }
 
+  // 오늘의 학습(인터랙티브 레슨) 자동 생성 — 이번 실행에서 브리핑을 새로 만들었거나 force일 때만(멱등).
+  // 실패해도 브리핑엔 영향 없음(try/catch 격리). 성공 시 🧩 알림. 크레딧 저잔액 체크 전에 둬서 이 지출도 반영.
+  let lessonResult: string | undefined;
+  if (isFresh('economy') || force) {
+    try {
+      const briefing = ServerCache.get('economy', today);
+      if (briefing && briefing.cards?.length) {
+        const r = await generateAndCacheLesson(briefing, today);
+        if (r.lesson) {
+          lessonResult = `ok: ${r.lesson.title}`;
+          try {
+            await sendOwnerAlert(lessonReadyAlert({ date: today, title: r.lesson.title }));
+          } catch (e) {
+            console.warn('[Cron] lesson alert failed:', e);
+          }
+        } else {
+          lessonResult = `fail: ${r.reason ?? 'unknown'}`;
+          console.warn(`[Cron] lesson generation rejected: ${r.reason}`);
+        }
+      }
+    } catch (lessonError) {
+      lessonResult = 'error';
+      console.warn('[Cron] lesson generation error:', lessonError);
+    }
+  }
+
   // 크레딧 저잔액 선제 경보 — 추정 잔액이 $3(경고)/$1(긴급) 이하로 "심각도 상승"할 때만 1회 발송.
   // (충전 시 원장이 레벨을 ok로 재무장 → 다시 떨어지면 재알림.) 시드 전이면 null → skip.
   try {
@@ -255,6 +283,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     results,
     snsQueue: Object.keys(snsResults).length > 0 ? snsResults : undefined,
     push: pushResult,
+    lesson: lessonResult,
     elapsedMs: elapsed,
     timestamp: new Date().toISOString(),
   });

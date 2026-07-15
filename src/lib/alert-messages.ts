@@ -41,6 +41,15 @@ export function watchdogRecoveredAlert(opts: { date: string }): string {
   return `✅ <b>아침브리핑 자동 복구</b>\n날짜: ${opts.date}\n1차 생성이 빠졌지만 워치독이 재생성했어요.`;
 }
 
+/** 🧩 오늘의 학습(인터랙티브 레슨) 생성 완료 */
+export function lessonReadyAlert(opts: { date: string; title: string }): string {
+  return (
+    `🧩 <b>오늘의 학습 생성됨</b>\n` +
+    `날짜: ${opts.date}\n📰 "${escapeHtml(opts.title)}"\n\n` +
+    `${siteUrl()}/learn`
+  );
+}
+
 /** 🟡/🔴 크레딧 잔액 저잔액 경보 (추정 잔액이 임계값 이하일 때, 선제) */
 export function creditLowAlert(opts: { remainingCents: number; level: 'warn' | 'urgent' }): string {
   const usd = (opts.remainingCents / 100).toFixed(2);
