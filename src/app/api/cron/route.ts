@@ -38,6 +38,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const source: CronSource =
     sourceParam === 'manual' || sourceParam === 'watchdog' ? sourceParam : 'cron';
 
+  // ?force=1 — 오늘자 브리핑이 이미 있어도 무시하고 강제 재생성(수동 재생성/신규 코드 검증용).
+  const force = request.nextUrl.searchParams.get('force') === '1';
+
   const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().split('T')[0];
   // 출시 전 비용 절감: economy만 실시간 생성, investment/lifestyle은 evergreen fallback 서빙
   const categories = ['economy'];
@@ -66,6 +69,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         category,
         today,
         () => generateBriefing(category, today),
+        { force },
       );
       // 생성됐어도 Redis 저장이 실패하면 다른 인스턴스(읽기 엔드포인트)는 폴백만
       // 서빙한다. 따라서 영구 저장 여부를 직접 확인하고, 안 됐으면 실패로 처리한다.
@@ -102,6 +106,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
             category,
             today,
             () => generateBriefing(category, today, { retry: true, maxTokens: 12000, temperature: 0.3 }),
+            { force },
           );
           if (isRedisConfigured() && !(await ServerCache.peekRedis(category, today))) {
             throw new Error('retry generated but not persisted to Redis');

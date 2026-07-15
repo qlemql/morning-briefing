@@ -60,13 +60,15 @@ export const ServerCache = {
     category: string,
     date: string,
     generator: () => Promise<BriefingCategory>,
+    opts: { force?: boolean } = {},
   ): Promise<BriefingCategory> {
+    // force=true면 기존 캐시를 무시하고 무조건 재생성(성공 시 아래에서 Redis에 덮어씀).
     // 1. In-memory 캐시 확인
-    const cached = this.get(category, date);
+    const cached = opts.force ? null : this.get(category, date);
     if (cached) return cached;
 
     // 2. Redis 캐시 확인 (cold start 시에도 재생성 방지)
-    if (isRedisConfigured()) {
+    if (!opts.force && isRedisConfigured()) {
       try {
         const redisKey = `mb:briefing:${category}:${date}`;
         const redisData = await kvGet(redisKey);
