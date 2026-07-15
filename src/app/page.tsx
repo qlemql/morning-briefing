@@ -623,15 +623,15 @@ export default function Home() {
         {briefing && !loading && (
           <div className="space-y-2">
             <Link
-              href="/learn"
+              href={isToday ? '/learn' : `/learn?date=${viewDate}`}
               onClick={() => hapticLight()}
               className="block rounded-2xl border border-teal-200 dark:border-teal-900/50 bg-teal-50/70 dark:bg-teal-950/20 p-4 active:scale-[0.99] transition-transform"
             >
               <div className="flex items-center gap-3">
                 <span className="text-2xl" aria-hidden="true">📰</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-teal-900 dark:text-teal-200">오늘 뉴스로 만져보기</p>
-                  <p className="text-xs text-teal-700/80 dark:text-teal-300/70 mt-0.5">오늘 브리핑에서 뽑은 개념을 슬라이더로 30초 체감</p>
+                  <p className="text-sm font-bold text-teal-900 dark:text-teal-200">{isToday ? '오늘' : '이 날'} 뉴스로 만져보기</p>
+                  <p className="text-xs text-teal-700/80 dark:text-teal-300/70 mt-0.5">{isToday ? '오늘' : '이 날'} 브리핑에서 뽑은 개념을 슬라이더로 30초 체감</p>
                 </div>
                 <span className="text-teal-500 dark:text-teal-400" aria-hidden="true">→</span>
               </div>
