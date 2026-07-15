@@ -3,6 +3,7 @@ import { BriefingCard, BriefingCategory } from './types';
 import { canAffordCall, recordCall } from './budget';
 import { filterBriefing } from './content-filter';
 import { validateBriefing } from './content-validator';
+import { getEvergreenBriefing } from '@/data/evergreen';
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -243,6 +244,94 @@ function recoverCardsFromArray(text: string): unknown[] {
   return cards;
 }
 
+const CARD_TYPES = ['오늘의핵심', '영향분석', '실전인사이트'] as const;
+
+/**
+ * 파싱된 카드를 의도한 슬롯(type→id→순서)에 배치하고, 빈 슬롯은 evergreen으로 채운다.
+ * 카드 하나가 malformed로 탈락해도(예: 가운데 카드) 남은 카드는 올바른 위치에 남고,
+ * 빈 자리는 "준비 중" 대신 진짜 상록 카드로 메꿔진다. freshCount = 실제 생성된 카드 수.
+ */
+function reconcileToThreeCards(
+  cards: BriefingCard[],
+  evergreen: BriefingCategory | null,
+): { cards: BriefingCard[]; freshCount: number } {
+  const slots: (BriefingCard | null)[] = [null, null, null];
+  const place = (c: BriefingCard, order: number): void => {
+    const byType = (CARD_TYPES as readonly string[]).indexOf(c.type ?? '');
+    if (byType >= 0 && !slots[byType]) { slots[byType] = c; return; }
+    const idm = (c.id || '').match(/(\d+)/);
+    const byId = idm ? parseInt(idm[1], 10) - 1 : -1;
+    if (byId >= 0 && byId < 3 && !slots[byId]) { slots[byId] = c; return; }
+    for (let i = 0; i < 3; i++) { const s = (order + i) % 3; if (!slots[s]) { slots[s] = c; return; } }
+  };
+  cards.slice(0, 3).forEach((c, i) => place(c, i));
+
+  let freshCount = 0;
+  const out: BriefingCard[] = slots.map((c, i) => {
+    if (c) { freshCount++; return c; }
+    const eg = evergreen?.cards?.[i];
+    if (eg) return eg;
+    return {
+      id: `card_${i + 1}`,
+      number: (i + 1) as 1 | 2 | 3,
+      title: '준비 중',
+      content: '이 카드는 현재 준비 중입니다.',
+      summary: '곧 업데이트됩니다',
+      type: CARD_TYPES[i] as BriefingCard['type'],
+    };
+  });
+  return { cards: out, freshCount };
+}
+
+/**
+ * 구조화 출력 도구 — 모델이 자유 텍스트 JSON 대신 이 도구로 결과를 제출하게 해
+ * "문자열 내 이스케이프 안 된 따옴표로 카드 JSON이 깨지는" 문제를 원천 차단한다.
+ * (tool_use.input은 SDK가 이미 정규 객체로 준다.)
+ */
+const BRIEFING_TOOL: Anthropic.Messages.Tool = {
+  name: 'submit_briefing',
+  description:
+    '완성된 아침 브리핑 카드 3장을 최종 제출한다. 웹 검색을 마친 뒤 반드시 이 도구로만 결과를 제출할 것. 일반 텍스트로 JSON을 출력하지 말 것.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      cards: {
+        type: 'array',
+        description: '정확히 3장 (순서: 오늘의핵심 → 영향분석 → 실전인사이트)',
+        items: {
+          type: 'object',
+          properties: {
+            title: { type: 'string', description: '20자 이내' },
+            content: { type: 'string', description: '4~6문장, 구체적 수치 포함' },
+            summary: { type: 'string', description: '60자 이내' },
+            type: { type: 'string', enum: [...CARD_TYPES] },
+            source: { type: 'string', description: '언론사명' },
+            sourceUrl: { type: 'string', description: '실제 기사 URL' },
+            beginnerExplanation: {
+              type: 'object',
+              properties: {
+                tldr: { type: 'string' },
+                glossary: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: { term: { type: 'string' }, explain: { type: 'string' } },
+                    required: ['term', 'explain'],
+                  },
+                },
+                whyItMatters: { type: 'string' },
+              },
+              required: ['tldr', 'glossary', 'whyItMatters'],
+            },
+          },
+          required: ['title', 'content', 'summary', 'type'],
+        },
+      },
+    },
+    required: ['cards'],
+  },
+};
+
 /**
  * @param opts cron 재시도를 첫 시도와 "의미 있게 다르게" 만들기 위한 옵션.
  *   재시도가 첫 시도와 동일 파라미터면 같은 실패(잘림/형식이탈)를 결정론적으로 반복하므로,
@@ -303,13 +392,17 @@ export async function generateBriefing(
 - 절대로 특정 종목/자산의 매수나 매도를 권유하지 마세요. "주목할 만하다", "모니터링이 필요하다" 수준의 표현만 가능
 - JSON만 출력하세요`;
 
-  // 재시도 전용 보강 지시 — 형식 이탈(산문/마크다운/불완전 JSON)로 인한 첫 실패를 정조준.
-  const finalUserPrompt = opts.retry
-    ? userPrompt +
-      `\n\n[재시도] 직전 응답이 파싱 불가였습니다. 설명·머리말·마크다운 코드펜스 없이 ` +
-      `'{'로 시작해 '}'로 끝나는 완결된 JSON 객체 하나만 출력하세요. 길이가 부담되면 ` +
-      `각 카드의 glossary를 최대 2개로 줄여서라도 반드시 JSON을 끝까지 닫으세요.`
-    : userPrompt;
+  // 출력 방법 — 구조화 도구(submit_briefing)로 제출해 이스케이프/따옴표로 JSON이 깨지는 걸 원천 차단.
+  // (텍스트 JSON은 도구를 안 썼을 때의 폴백일 뿐.)
+  const TOOL_INSTRUCTION =
+    `\n\n[출력 방법] 일반 텍스트로 JSON을 쓰지 말고, 웹 검색을 마친 뒤 반드시 submit_briefing 도구를 ` +
+    `호출해 카드 3장을 한 번에 제출하세요.`;
+  const finalUserPrompt =
+    (opts.retry
+      ? userPrompt +
+        `\n\n[재시도] 직전 생성이 불완전했습니다(카드 누락/형식 이탈). 반드시 submit_briefing 도구로 ` +
+        `카드 3장을 완결해 제출하세요. 길이가 부담되면 각 카드 glossary를 최대 2개로 줄이세요.`
+      : userPrompt) + TOOL_INSTRUCTION;
 
   // Budget guard — prevent overspending
   const budget = await canAffordCall();
@@ -346,6 +439,7 @@ export async function generateBriefing(
           allowed_domains: getAllowedDomains(category),
           max_uses: 2, // 3→2 (2026-07-06 비용절감). 검색비 + 되먹임 input 동시 감소.
         },
+        BRIEFING_TOOL, // 구조화 출력 — 모델이 검색 후 이 도구로 결과 제출
       ],
       messages: [
         { role: 'user', content: finalUserPrompt },
@@ -377,86 +471,94 @@ export async function generateBriefing(
     web_search_requests: usage.server_tool_use?.web_search_requests ?? 0,
   });
 
-  // Extract text content from potentially multi-block response
-  const rawText = extractTextFromResponse(message.content);
+  // ── 결과 파싱 ──────────────────────────────────────────────────────────────
+  // 1순위: 구조화 출력(submit_briefing 도구). tool_use.input은 SDK가 이미 정규 객체로 주므로
+  // "문자열 내 이스케이프 안 된 따옴표로 카드 JSON이 깨져 카드가 탈락"하던 문제가 원천 차단된다.
+  const toolUse = message.content.find(
+    (b): b is Anthropic.Messages.ToolUseBlock => b.type === 'tool_use' && b.name === 'submit_briefing',
+  );
+  let parsed: ClaudeResponse | null =
+    toolUse && toolUse.input && typeof toolUse.input === 'object'
+      ? (toolUse.input as ClaudeResponse)
+      : null;
+  const usedTool = parsed !== null;
+  let rawText = '';
 
-  if (!rawText) {
-    console.error('[Claude] No text content in response. Content types:', message.content.map(b => b.type));
-    throw new Error('No text content in Claude response');
-  }
-
-  // Clean markdown code blocks if present
-  const cleaned = rawText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-
-  // Extract JSON — 여러 전략(응답 형태 변동에 견디도록). 각 전략은 앞선 게 실패했을 때만 시도.
-  let parsed: ClaudeResponse | null = null;
-
-  // Strategy 1: 통째로 파싱
-  try {
-    parsed = JSON.parse(cleaned);
-  } catch { /* fall through */ }
-
-  // Strategy 2: 공백 허용으로 {"cards" ...} 블록을 찾아 중괄호 균형(문자열 인식)으로 잘라 파싱.
-  // (과거엔 정확히 `{"cards"` 리터럴만 찾아, 들여쓰기/머리말이 붙으면 놓쳤음.)
+  // 2순위(폴백): 모델이 도구를 안 쓰고 텍스트로 답한 경우 — 하드닝된 텍스트 파서.
   if (!parsed) {
-    const m = cleaned.match(/\{\s*"cards"/);
-    if (m && m.index !== undefined) {
-      const end = balancedObjectEnd(cleaned, m.index);
-      if (end > m.index) {
-        try { parsed = JSON.parse(cleaned.substring(m.index, end)); } catch { /* fall through */ }
+    rawText = extractTextFromResponse(message.content);
+    if (!rawText) {
+      console.error('[Claude] No text content in response. Content types:', message.content.map(b => b.type));
+      throw new Error('No text content in Claude response');
+    }
+    const cleaned = rawText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+
+    // Strategy 1: 통째로 파싱
+    try { parsed = JSON.parse(cleaned); } catch { /* fall through */ }
+
+    // Strategy 2: 공백 허용으로 {"cards" ...} 블록을 중괄호 균형(문자열 인식)으로 잘라 파싱.
+    if (!parsed) {
+      const m = cleaned.match(/\{\s*"cards"/);
+      if (m && m.index !== undefined) {
+        const end = balancedObjectEnd(cleaned, m.index);
+        if (end > m.index) {
+          try { parsed = JSON.parse(cleaned.substring(m.index, end)); } catch { /* fall through */ }
+        }
       }
     }
-  }
 
-  // Strategy 3: 그리디 폴백 — 첫 '{'부터 마지막 '}'까지. (과거엔 Strategy 2 블록 안에 중첩돼
-  // `{"cards"`를 못 찾으면 아예 실행 안 되던 버그가 있었음 → 항상 실행되도록 분리.)
-  if (!parsed) {
-    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      try { parsed = JSON.parse(jsonMatch[0]); } catch { /* fall through */ }
+    // Strategy 3: 그리디 폴백 — 첫 '{'부터 마지막 '}'까지.
+    if (!parsed) {
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try { parsed = JSON.parse(jsonMatch[0]); } catch { /* fall through */ }
+      }
+    }
+
+    // Strategy 4: 잘림/미완결 복구 — cards 배열에서 완결된 카드만 추출.
+    if (!parsed) {
+      const recovered = recoverCardsFromArray(cleaned);
+      if (recovered.length > 0) {
+        parsed = { cards: recovered as BriefingCard[] };
+        console.log(`[Claude] Recovered ${recovered.length} card(s) from partial response (stop=${message.stop_reason})`);
+      }
+    }
+
+    if (!parsed) {
+      // 진단용: stop_reason + 길이 + 앞부분 스니펫을 에러에 실어 cron 결과/알림/어드민까지 전파.
+      const snippet = rawText.replace(/\s+/g, ' ').slice(0, 300);
+      console.error(`[Claude] No valid JSON found. stop=${message.stop_reason} len=${rawText.length} raw:`, rawText.substring(0, 500));
+      throw new Error(`No JSON found (stop=${message.stop_reason}, len=${rawText.length}): ${snippet}`);
     }
   }
 
-  // Strategy 4: 잘림/미완결 복구 — cards 배열에서 완결된 카드만 추출. stop_reason 무관하게
-  // 최후 수단으로 시도(형식 이탈로도 파싱이 실패할 수 있으므로).
-  if (!parsed) {
-    const recovered = recoverCardsFromArray(cleaned);
-    if (recovered.length > 0) {
-      parsed = { cards: recovered as BriefingCard[] };
-      console.log(`[Claude] Recovered ${recovered.length} card(s) from partial response (stop=${message.stop_reason})`);
-    }
-  }
-
-  if (!parsed) {
-    // 진단용: stop_reason + 길이 + 앞부분 스니펫을 에러에 실어 cron 결과/알림/어드민까지 전파.
-    const snippet = rawText.replace(/\s+/g, ' ').slice(0, 300);
-    console.error(`[Claude] No valid JSON found. stop=${message.stop_reason} len=${rawText.length} raw:`, rawText.substring(0, 500));
-    throw new Error(`No JSON found (stop=${message.stop_reason}, len=${rawText.length}): ${snippet}`);
-  }
   if (!parsed.cards || !Array.isArray(parsed.cards) || parsed.cards.length === 0) {
     throw new Error('Invalid or empty response structure from Claude');
   }
+  console.log(`[Claude] Parsed via ${usedTool ? 'submit_briefing tool' : 'text fallback'}: ${parsed.cards.length} card(s)`);
 
-  const types = ['오늘의핵심', '영향분석', '실전인사이트'] as const;
+  const types = CARD_TYPES;
 
-  // 카드가 3개 미만이면 빈 카드로 채우기
-  while (parsed.cards.length < 3) {
-    const idx = parsed.cards.length;
-    parsed.cards.push({
-      id: `card_${idx + 1}`,
-      number: (idx + 1) as 1 | 2 | 3,
-      title: '준비 중',
-      content: '이 카드는 현재 준비 중입니다.',
-      summary: '곧 업데이트됩니다',
-      type: types[idx],
-    });
+  // 파싱된 카드를 의도한 슬롯에 배치하고, 빈 슬롯은 "준비 중" 대신 evergreen으로 채운다.
+  // (카드 하나가 malformed로 탈락해도 사용자에겐 항상 진짜 3장이 보이고, 위치/타입도 정규화됨.)
+  const { cards: reconciledCards, freshCount } = reconcileToThreeCards(
+    parsed.cards as BriefingCard[],
+    getEvergreenBriefing(category, date),
+  );
+  if (freshCount < 3) {
+    // 부분 생성 관측 — partial도 조용히 "성공"으로 넘어가던 사각지대를 로그로 드러낸다.
+    const snippet = usedTool ? '(structured tool output)' : rawText.replace(/\s+/g, ' ').slice(0, 300);
+    console.warn(
+      `[Claude] PARTIAL ${category} ${date}: ${freshCount}/3 fresh — filled ${3 - freshCount} from evergreen. ` +
+      `via=${usedTool ? 'tool' : 'text'} stop=${message.stop_reason} raw=${snippet}`,
+    );
   }
 
   // Strip HTML tags from web_search citations (e.g. <cite index="...">...</cite>)
   const stripCiteTags = (text: string): string =>
     text.replace(/<\/?cite[^>]*>/g, '').replace(/\s{2,}/g, ' ').trim();
 
-  const validatedCards = parsed.cards.slice(0, 3).map((card, index) => {
+  const validatedCards = reconciledCards.map((card, index) => {
     const title = stripCiteTags((card.title || '')).trim();
     const content = stripCiteTags((card.content || '')).trim();
     const summary = stripCiteTags((card.summary || '')).trim();
@@ -486,12 +588,14 @@ export async function generateBriefing(
       : undefined;
 
     return {
-      id: card.id || `card_${index + 1}`,
+      // id/number/type은 위치 기준으로 정규화 — 카드가 탈락/재배치돼도 오라벨링(예: 2번 자리에
+      // id=card_3, type=실전인사이트)이 생기지 않게 한다.
+      id: `card_${index + 1}`,
       number: (index + 1) as 1 | 2 | 3,
       title: clampedTitle || `카드 ${index + 1}`,
       content: content || '콘텐츠를 불러오는 중 문제가 발생했습니다.',
       summary: clampedSummary || '요약을 불러오지 못했습니다',
-      type: card.type || (types[index] as BriefingCard['type']),
+      type: types[index] as BriefingCard['type'],
       source: card.source,
       sourceUrl: card.sourceUrl && card.sourceUrl.startsWith('http') ? card.sourceUrl : undefined,
       // tldr가 비면 해설 표시 안 함(빈 카드 방지)
