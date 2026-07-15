@@ -17,7 +17,6 @@ const WelcomeToast = lazy(() => import('@/components/WelcomeToast'));
 const UpdateBanner = lazy(() => import('@/components/UpdateBanner'));
 const MarketSnapshot = lazy(() => import('@/components/MarketSnapshot'));
 const DailyTerm = lazy(() => import('@/components/DailyTerm'));
-const DailyQuiz = lazy(() => import('@/components/DailyQuiz'));
 const OnboardingTutorial = lazy(() => import('@/components/OnboardingTutorial'));
 const NotificationSettings = lazy(() => import('@/components/NotificationSettings'));
 // [HIDDEN] 아래 컴포넌트들은 유저 확보 후 활성화 예정
@@ -617,13 +616,6 @@ export default function Home() {
         {briefing && !loading && (
           <Suspense fallback={null}>
             <DailyTerm />
-          </Suspense>
-        )}
-
-        {/* Daily Quiz & Poll */}
-        {briefing && !loading && (
-          <Suspense fallback={null}>
-            <DailyQuiz />
           </Suspense>
         )}
 
